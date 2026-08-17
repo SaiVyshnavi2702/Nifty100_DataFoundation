@@ -1,0 +1,32 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables
+.env
+
+# Generated database
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated output
+output/*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+
+# OS files
+Thumbs.db
+.DS_Store
