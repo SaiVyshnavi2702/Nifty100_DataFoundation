@@ -4,35 +4,46 @@ import pandas as pd
 
 def normalize_year(value):
     """
-    Convert different year formats into a consistent value.
+    Convert financial period values into a consistent form.
 
     Examples:
         Dec 2012 -> 2012
         Mar-2014 -> 2014
-        2019 -> 2019
-        2020.0 -> 2020
+        Mar-14 -> 2014
+        2020 -> 2020
+        TTM -> TTM
     """
 
-    if pd.isna(value):
+    if value is None or pd.isna(value):
         return None
 
-    text = str(value).strip()
+    value = str(value).strip()
 
-    if not text:
+    if not value:
         return None
 
-    # Handle values such as 2019.0
-    if re.match(r"^\d{4}\.0$", text):
-        return int(float(text))
+    if value.upper() == "TTM":
+        return "TTM"
 
-    # Find a four-digit year anywhere in the value
-    match = re.search(r"(19|20)\d{2}", text)
+    match = re.search(r"(\d{4})", value)
 
     if match:
-        return int(match.group(0))
+        return int(match.group(1))
+
+    match = re.search(r"(\d{2})$", value)
+
+    if match:
+        year = int(match.group(1))
+
+        if year >= 50:
+            return 1900 + year
+
+        return 2000 + year
+
+    if value.isdigit():
+        return int(value)
 
     return None
-
 
 def normalize_ticker(value):
     """
