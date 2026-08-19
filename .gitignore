@@ -30,3 +30,11 @@ output/*
 # OS files
 Thumbs.db
 .DS_Store
+
+# Backup Excel files
+*_backup.xlsx
+*_backup.xls
+*_backup.xlsm
+
+# Validation reports
+validation_failures.csv
