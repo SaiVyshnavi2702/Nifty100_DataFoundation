@@ -6,6 +6,8 @@ DROP TABLE IF EXISTS financial_ratios;
 DROP TABLE IF EXISTS cashflow;
 DROP TABLE IF EXISTS profitandloss;
 DROP TABLE IF EXISTS balancesheet;
+DROP TABLE IF EXISTS documents;
+DROP TABLE IF EXISTS prosandcons;
 DROP TABLE IF EXISTS analysis;
 DROP TABLE IF EXISTS peer_groups;
 DROP TABLE IF EXISTS sectors;
@@ -220,6 +222,34 @@ CREATE TABLE stock_prices (
 );
 
 
+CREATE TABLE documents (
+    id INTEGER PRIMARY KEY,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    period TEXT,
+    annual_report TEXT,
+
+    FOREIGN KEY (company_id)
+        REFERENCES companies(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+
+
+CREATE TABLE prosandcons (
+    id INTEGER PRIMARY KEY,
+    company_id TEXT NOT NULL,
+    pros TEXT,
+    cons TEXT,
+
+    FOREIGN KEY (company_id)
+        REFERENCES companies(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+
 CREATE INDEX idx_sectors_company
     ON sectors(company_id);
 
@@ -246,3 +276,9 @@ CREATE INDEX idx_market_cap_company_period
 
 CREATE INDEX idx_stock_prices_company_date
     ON stock_prices(company_id, date);
+
+CREATE INDEX idx_documents_company
+    ON documents(company_id);
+
+CREATE INDEX idx_prosandcons_company
+    ON prosandcons(company_id);

@@ -1,0 +1,13 @@
+table_name,source_file,source_rows,database_rows,status
+companies,data\raw\core\companies.xlsx,100,100,SUCCESS
+sectors,data\raw\supporting\sectors.xlsx,92,92,SUCCESS
+peer_groups,data\raw\supporting\peer_groups.xlsx,56,56,SUCCESS
+analysis,data\raw\core\analysis.xlsx,20,20,SUCCESS
+balancesheet,data\raw\core\balancesheet.xlsx,1225,1225,SUCCESS
+profitandloss,data\raw\core\profitandloss.xlsx,1263,1263,SUCCESS
+cashflow,data\raw\core\cashflow.xlsx,1152,1152,SUCCESS
+financial_ratios,data\raw\supporting\financial_ratios.xlsx,1065,1065,SUCCESS
+market_cap,data\raw\supporting\market_cap.xlsx,552,552,SUCCESS
+stock_prices,data\raw\supporting\stock_prices.xlsx,5520,5520,SUCCESS
+documents,data\raw\core\documents.xlsx,1584,1584,SUCCESS
+prosandcons,data\raw\core\prosandcons.xlsx,16,16,SUCCESS
