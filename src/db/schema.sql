@@ -30,7 +30,7 @@ CREATE TABLE companies (
 
 CREATE TABLE sectors (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     broad_sector TEXT,
     sub_sector TEXT,
     index_weight_pct REAL,
@@ -48,7 +48,7 @@ CREATE TABLE sectors (
 CREATE TABLE peer_groups (
     id INTEGER PRIMARY KEY,
     peer_group_name TEXT NOT NULL,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     is_benchmark INTEGER NOT NULL DEFAULT 0
         CHECK (is_benchmark IN (0, 1)),
 
@@ -61,7 +61,7 @@ CREATE TABLE peer_groups (
 
 CREATE TABLE analysis (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     compounded_sales_growth REAL,
     compounded_profit_growth REAL,
     stock_price_cagr REAL,
@@ -76,8 +76,10 @@ CREATE TABLE analysis (
 
 CREATE TABLE balancesheet (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
-    year INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    period TEXT NOT NULL,
+
     equity_capital REAL,
     reserves REAL,
     borrowings REAL,
@@ -94,14 +96,16 @@ CREATE TABLE balancesheet (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
 
-    UNIQUE(company_id, year)
+    UNIQUE(company_id, period)
 );
 
 
 CREATE TABLE profitandloss (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
-    year INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    period TEXT NOT NULL,
+
     sales REAL,
     expenses REAL,
     operating_profit REAL,
@@ -120,14 +124,16 @@ CREATE TABLE profitandloss (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
 
-    UNIQUE(company_id, year)
+    UNIQUE(company_id, period)
 );
 
 
 CREATE TABLE cashflow (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
-    year INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    period TEXT NOT NULL,
+
     operating_activity REAL,
     investing_activity REAL,
     financing_activity REAL,
@@ -138,14 +144,16 @@ CREATE TABLE cashflow (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
 
-    UNIQUE(company_id, year)
+    UNIQUE(company_id, period)
 );
 
 
 CREATE TABLE financial_ratios (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
-    year INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    period TEXT NOT NULL,
+
     net_profit_margin_pct REAL,
     operating_profit_margin_pct REAL,
     return_on_equity_pct REAL,
@@ -165,14 +173,16 @@ CREATE TABLE financial_ratios (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
 
-    UNIQUE(company_id, year)
+    UNIQUE(company_id, period)
 );
 
 
 CREATE TABLE market_cap (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
-    year INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
+    year INTEGER,
+    period TEXT NOT NULL,
+
     market_cap_crore REAL,
     enterprise_value_crore REAL,
     pe_ratio REAL,
@@ -185,14 +195,15 @@ CREATE TABLE market_cap (
         ON UPDATE CASCADE
         ON DELETE CASCADE,
 
-    UNIQUE(company_id, year)
+    UNIQUE(company_id, period)
 );
 
 
 CREATE TABLE stock_prices (
     id INTEGER PRIMARY KEY,
-    company_id INTEGER NOT NULL,
+    company_id TEXT NOT NULL,
     date TEXT NOT NULL,
+
     open_price REAL,
     high_price REAL,
     low_price REAL,
@@ -218,20 +229,20 @@ CREATE INDEX idx_peer_groups_company
 CREATE INDEX idx_analysis_company
     ON analysis(company_id);
 
-CREATE INDEX idx_balancesheet_company_year
-    ON balancesheet(company_id, year);
+CREATE INDEX idx_balancesheet_company_period
+    ON balancesheet(company_id, period);
 
-CREATE INDEX idx_profitandloss_company_year
-    ON profitandloss(company_id, year);
+CREATE INDEX idx_profitandloss_company_period
+    ON profitandloss(company_id, period);
 
-CREATE INDEX idx_cashflow_company_year
-    ON cashflow(company_id, year);
+CREATE INDEX idx_cashflow_company_period
+    ON cashflow(company_id, period);
 
-CREATE INDEX idx_financial_ratios_company_year
-    ON financial_ratios(company_id, year);
+CREATE INDEX idx_financial_ratios_company_period
+    ON financial_ratios(company_id, period);
 
-CREATE INDEX idx_market_cap_company_year
-    ON market_cap(company_id, year);
+CREATE INDEX idx_market_cap_company_period
+    ON market_cap(company_id, period);
 
 CREATE INDEX idx_stock_prices_company_date
     ON stock_prices(company_id, date);

@@ -4,15 +4,16 @@ import pandas as pd
 
 from normaliser import (
     normalize_year,
+    normalize_period,
     normalize_ticker,
-    normalize_column_name
+    normalize_column_name,
 )
 
 
 CORE_PATH = os.path.join("data", "raw", "core")
 SUPPORTING_PATH = os.path.join("data", "raw", "supporting")
 
-DB_PATH = "data/nifty100.db"
+DB_PATH = os.path.join("data", "nifty100.db")
 SCHEMA_PATH = os.path.join("src", "db", "schema.sql")
 
 
@@ -22,6 +23,7 @@ FILES = {
     "cashflow": os.path.join(CORE_PATH, "cashflow.xlsx"),
     "companies": os.path.join(CORE_PATH, "companies.xlsx"),
     "profitandloss": os.path.join(CORE_PATH, "profitandloss.xlsx"),
+
     "financial_ratios": os.path.join(
         SUPPORTING_PATH,
         "financial_ratios.xlsx"
@@ -47,16 +49,26 @@ FILES = {
 
 LOAD_ORDER = [
     "companies",
+    "sectors",
+    "peer_groups",
     "analysis",
     "balancesheet",
-    "cashflow",
     "profitandloss",
+    "cashflow",
     "financial_ratios",
     "market_cap",
-    "peer_groups",
-    "sectors",
     "stock_prices"
 ]
+
+
+UNIQUE_KEY_TABLES = {
+    "balancesheet": ["company_id", "period"],
+    "profitandloss": ["company_id", "period"],
+    "cashflow": ["company_id", "period"],
+    "financial_ratios": ["company_id", "period"],
+    "market_cap": ["company_id", "period"],
+    "stock_prices": ["company_id", "date"],
+}
 
 
 def clean_dataframe(df):
@@ -88,15 +100,23 @@ def normalize_common_columns(df):
         )
 
     if "year" in df.columns:
+        df["period"] = df["year"].apply(
+            normalize_period
+        )
+
         df["year"] = df["year"].apply(
             normalize_year
         )
 
     if "date" in df.columns:
-        df["date"] = pd.to_datetime(
+        parsed_dates = pd.to_datetime(
             df["date"],
             errors="coerce"
-        ).dt.strftime("%Y-%m-%d")
+        )
+
+        df["date"] = parsed_dates.dt.strftime(
+            "%Y-%m-%d"
+        )
 
     return df
 
@@ -118,10 +138,20 @@ def load_excel_file(path):
             "File not found: {}".format(path)
         )
 
-    if path.startswith(CORE_PATH):
+    absolute_path = os.path.abspath(path)
+    absolute_core_path = os.path.abspath(CORE_PATH)
+
+    if absolute_path.startswith(
+        absolute_core_path + os.sep
+    ):
         header_row = 1
     else:
         header_row = 0
+
+    print(
+        "Reading Excel with header row:",
+        header_row
+    )
 
     df = pd.read_excel(
         path,
@@ -159,7 +189,9 @@ def load_all_files():
 def initialize_database(connection):
     if not os.path.exists(SCHEMA_PATH):
         raise FileNotFoundError(
-            "Schema file not found: {}".format(SCHEMA_PATH)
+            "Schema file not found: {}".format(
+                SCHEMA_PATH
+            )
         )
 
     with open(
@@ -172,58 +204,135 @@ def initialize_database(connection):
     connection.executescript(schema)
 
 
-def load_datasets_to_database(connection, datasets):
-    unique_key_tables = {
-        "balancesheet": ["company_id", "year"],
-        "profitandloss": ["company_id", "year"],
-        "cashflow": ["company_id", "year"],
-        "financial_ratios": ["company_id", "year"],
-        "market_cap": ["company_id", "year"],
-        "stock_prices": ["company_id", "date"]
+def validate_dataset_columns(
+    table_name,
+    df,
+    connection
+):
+    database_columns = connection.execute(
+        "PRAGMA table_info({})".format(
+            table_name
+        )
+    ).fetchall()
+
+    if not database_columns:
+        raise RuntimeError(
+            "Database table does not exist: {}".format(
+                table_name
+            )
+        )
+
+    database_column_names = {
+        row[1]
+        for row in database_columns
     }
 
+    dataframe_columns = set(df.columns)
+
+    missing_in_database = (
+        dataframe_columns
+        - database_column_names
+    )
+
+    if missing_in_database:
+        raise RuntimeError(
+            "Table '{}' is missing these columns: {}".format(
+                table_name,
+                sorted(missing_in_database)
+            )
+        )
+
+
+def check_duplicate_keys(
+    table_name,
+    df
+):
+    if table_name not in UNIQUE_KEY_TABLES:
+        return
+
+    keys = UNIQUE_KEY_TABLES[table_name]
+
+    missing_keys = [
+        key
+        for key in keys
+        if key not in df.columns
+    ]
+
+    if missing_keys:
+        raise RuntimeError(
+            "Table '{}' is missing key columns: {}".format(
+                table_name,
+                missing_keys
+            )
+        )
+
+    duplicate_count = df.duplicated(
+        subset=keys,
+        keep=False
+    ).sum()
+
+    if duplicate_count == 0:
+        print("Duplicate key check: PASSED")
+        return
+
+    print("\nDUPLICATE DATA DETECTED")
+    print("Table:", table_name)
+    print("Keys:", keys)
+    print("Duplicate rows:", duplicate_count)
+
+    duplicate_rows = df[
+        df.duplicated(
+            subset=keys,
+            keep=False
+        )
+    ]
+
+    display_columns = list(keys)
+
+    if "year" in duplicate_rows.columns:
+        display_columns.append("year")
+
+    if "period" in duplicate_rows.columns:
+        display_columns.append("period")
+
+    print(
+        duplicate_rows[
+            list(dict.fromkeys(display_columns))
+        ]
+        .sort_values(keys)
+        .to_string(index=False)
+    )
+
+    raise RuntimeError(
+        "Duplicate logical keys found in {}".format(
+            table_name
+        )
+    )
+
+
+def load_datasets_to_database(
+    connection,
+    datasets
+):
     for table_name in LOAD_ORDER:
+
+        print("\nPreparing table:", table_name)
+
         df = datasets[table_name].copy()
 
-        if table_name in unique_key_tables:
-            keys = unique_key_tables[table_name]
+        validate_dataset_columns(
+            table_name,
+            df,
+            connection
+        )
 
-            duplicate_mask = df.duplicated(
-                subset=keys,
-                keep="first"
-            )
-
-            duplicate_count = duplicate_mask.sum()
-
-            if duplicate_count > 0:
-                print("\nDUPLICATE DATA DETECTED")
-                print("Table:", table_name)
-                print("Keys:", keys)
-                print("Duplicate rows:", duplicate_count)
-
-                print(
-                    df[
-                        df.duplicated(
-                            subset=keys,
-                            keep=False
-                        )
-                    ][keys].sort_values(keys).to_string(
-                        index=False
-                    )
-                )
-
-                df = df.drop_duplicates(
-                    subset=keys,
-                    keep="first"
-                )
-
-                print(
-                    "Rows after duplicate removal:",
-                    len(df)
-                )
+        check_duplicate_keys(
+            table_name,
+            df
+        )
 
         print(
-            "\nLoading {} rows into table '{}'...".format(
+            "Loading {} rows into '{}'...".format(
                 len(df),
                 table_name
             )
@@ -237,15 +346,20 @@ def load_datasets_to_database(connection, datasets):
         )
 
         count = connection.execute(
-            "SELECT COUNT(*) FROM {}".format(table_name)
+            "SELECT COUNT(*) FROM {}".format(
+                table_name
+            )
         ).fetchone()[0]
 
         print(
-            "Inserted rows: {}".format(count)
+            "Rows currently in database:",
+            count
         )
 
+
 def verify_tables(connection):
-    expected_tables = [
+
+    expected_tables = {
         "companies",
         "sectors",
         "peer_groups",
@@ -256,7 +370,7 @@ def verify_tables(connection):
         "financial_ratios",
         "market_cap",
         "stock_prices"
-    ]
+    }
 
     actual_tables = connection.execute(
         """
@@ -273,8 +387,6 @@ def verify_tables(connection):
         for row in actual_tables
     }
 
-    expected_tables = set(expected_tables)
-
     missing_tables = expected_tables - actual_tables
 
     if missing_tables:
@@ -285,10 +397,16 @@ def verify_tables(connection):
         )
 
     print("\nSchema verification: PASSED")
-    print("Tables created: {}".format(len(actual_tables)))
+
+    print(
+        "Tables created: {}".format(
+            len(actual_tables)
+        )
+    )
 
 
 def verify_foreign_keys(connection):
+
     value = connection.execute(
         "PRAGMA foreign_keys"
     ).fetchone()[0]
@@ -305,6 +423,7 @@ def verify_foreign_keys(connection):
     ).fetchall()
 
     if violations:
+
         print("Foreign key check: FAILED")
 
         for violation in violations:
@@ -318,18 +437,35 @@ def verify_foreign_keys(connection):
 
 
 def verify_database(connection):
-    print("\n" + "=" * 70)
+
+    print("\n")
+    print("=" * 70)
     print("DATABASE VERIFICATION")
     print("=" * 70)
 
     verify_tables(connection)
+
     verify_foreign_keys(connection)
 
     print("\nTable row counts:")
 
-    for table_name in LOAD_ORDER:
+    for table_name in [
+        "companies",
+        "sectors",
+        "peer_groups",
+        "analysis",
+        "balancesheet",
+        "profitandloss",
+        "cashflow",
+        "financial_ratios",
+        "market_cap",
+        "stock_prices"
+    ]:
+
         count = connection.execute(
-            "SELECT COUNT(*) FROM {}".format(table_name)
+            "SELECT COUNT(*) FROM {}".format(
+                table_name
+            )
         ).fetchone()[0]
 
         print(
@@ -342,24 +478,8 @@ def verify_database(connection):
     print("=" * 70)
 
 
-def print_summary(datasets):
-    print("\n" + "=" * 70)
-    print("NIFTY 100 DATA FOUNDATION - LOAD SUMMARY")
-    print("=" * 70)
-
-    for name, df in datasets.items():
-        print(
-            "{:<20} rows={:<6} columns={}".format(
-                name,
-                len(df),
-                len(df.columns)
-            )
-        )
-
-    print("=" * 70)
-
-
 def main():
+
     print("Starting Nifty 100 Excel loader...")
 
     db_directory = os.path.dirname(DB_PATH)
@@ -372,35 +492,63 @@ def main():
 
     datasets = load_all_files()
 
-    print_summary(datasets)
+    print("\n")
+    print("=" * 70)
+    print("SOURCE DATA SUMMARY")
+    print("=" * 70)
 
-    print("\nCreating SQLite database:", DB_PATH)
+    for name, df in datasets.items():
 
-    connection = sqlite3.connect(DB_PATH)
+        print(
+            "{:<20} rows={:<6} columns={}".format(
+                name,
+                len(df),
+                len(df.columns)
+            )
+        )
+
+    print("=" * 70)
+
+    print(
+        "\nOpening SQLite database:",
+        DB_PATH
+    )
+
+    connection = sqlite3.connect(
+        DB_PATH
+    )
 
     try:
+
         connection.execute(
             "PRAGMA foreign_keys = ON"
         )
 
-        initialize_database(connection)
+        initialize_database(
+            connection
+        )
 
-        verify_tables(connection)
+        verify_tables(
+            connection
+        )
 
         load_datasets_to_database(
             connection,
             datasets
         )
 
-        verify_database(connection)
-
         connection.commit()
+
+        verify_database(
+            connection
+        )
 
         print(
             "\nSQLite database loading completed successfully."
         )
 
     except Exception:
+
         connection.rollback()
 
         print(
@@ -410,8 +558,9 @@ def main():
         raise
 
     finally:
+
         connection.close()
 
 
 if __name__ == "__main__":
-    main()  
+    main()
