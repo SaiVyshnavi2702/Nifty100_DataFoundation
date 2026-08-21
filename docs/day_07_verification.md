@@ -100,3 +100,14 @@ The technical verification for Day 07 is complete.
 
 The final database is populated and usable. Foreign-key integrity is clean, the data-quality validation report contains no failures, all ETL unit tests pass, and all exploratory SQL queries execute successfully.
 
+
+## Note on Final Dataset Counts
+
+The original Sprint 1 specification expected 92 companies and listed 10 tables.
+
+The final source data supplied to the project contains 100 companies, and the final SQLite database contains 12 tables, including the market_cap dataset.
+
+The load audit confirms that all available source rows were loaded successfully. No records were removed solely to match the originally estimated row counts.
+
+The final database therefore reflects the actual supplied source data rather than forcing the database to match the earlier estimates.
+
