@@ -1,4 +1,4 @@
-\# Sprint 1 - Data Foundation Retrospective
+# Sprint 1 - Data Foundation Retrospective
 
 
 
@@ -18,7 +18,7 @@ The sprint was planned for 34 story points across Day 01 to Day 07.
 
 
 
-\## What Went Well
+## What Went Well
 
 
 
@@ -56,7 +56,7 @@ The 10 exploratory SQL queries were executed successfully against the final data
 
 
 
-\## What Could Be Improved
+## What Could Be Improved
 
 
 
@@ -78,7 +78,7 @@ More automated tests could be added for the loader and validator in future sprin
 
 
 
-\## What We Learned
+## What We Learned
 
 
 
@@ -104,7 +104,7 @@ Running exploratory queries against the final database provides a useful final c
 
 
 
-\## Sprint Outcome
+## Sprint Outcome
 
 
 

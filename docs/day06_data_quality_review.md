@@ -1,8 +1,8 @@
-\# Day 06 — Data Quality Manual Review
+# Day 06 — Data Quality Manual Review
 
 
 
-\## Objective
+## Objective
 
 
 
@@ -10,7 +10,7 @@ Reviewed the loaded financial data manually to check year coverage, missing data
 
 
 
-\## 1. Random Company Review
+## 1. Random Company Review
 
 
 
@@ -38,7 +38,7 @@ The sample companies had consistent historical data from 2013 through 2024, with
 
 
 
-\## 2. Overall Year Coverage
+## 2. Overall Year Coverage
 
 
 
@@ -58,7 +58,7 @@ Current database coverage:
 
 
 
-\## 3. Companies With Less Than 5 Years of Data
+## 3. Companies With Less Than 5 Years of Data
 
 
 
@@ -90,7 +90,7 @@ The database contains the same records, so this is a source-data limitation and 
 
 
 
-\## 4. Missing Balance Sheet Data
+## 4. Missing Balance Sheet Data
 
 
 
@@ -116,7 +116,7 @@ Therefore, these missing records were not caused by the loader.
 
 
 
-\## 5. Duplicate Record Check
+## 5. Duplicate Record Check
 
 
 
@@ -140,7 +140,7 @@ No duplicate financial records were found.
 
 
 
-\## 6. Foreign Key Check
+## 6. Foreign Key Check
 
 
 
@@ -157,8 +157,7 @@ Result:
 \- Foreign key violations: 0
 
 
-
-\## 7. Loader Review
+## 7. Loader Review
 
 
 
@@ -170,7 +169,7 @@ No loader bug was found during this review, so no unnecessary changes were made 
 
 
 
-\## Conclusion
+## Conclusion
 
 
 
