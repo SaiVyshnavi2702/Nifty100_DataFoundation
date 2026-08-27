@@ -1,0 +1,621 @@
+Day 13 - Ratio Edge Case Review
+
+Financials sector check
+
+Distinct Financials companies found: 23
+Expected Financials companies: 19
+Financials count check: REVIEW - expected 19, found 23
+
+The high-leverage warning is intentionally suppressed for companies classified as Financials. High D/E is structurally normal for banks and financial institutions.
+
+Financials companies
+
+AXISBANK | Axis Bank Ltd | Financials
+BAJAJFINSV | Bajaj Finserv Ltd | Financials
+BAJAJHLDNG | Bajaj Holdings & Investment Ltd | Financials
+BAJFINANCE | Bajaj Finance Ltd | Financials
+BANKBARODA | Bank of Baroda | Financials
+CANBK | Canara Bank | Financials
+CHOLAFIN | Cholamandalam Investment & Finance Company Ltd | Financials
+HDFCBANK | HDFC Bank Ltd | Financials
+HDFCLIFE | HDFC Life Insurance Company Ltd | Financials
+ICICIBANK | ICICI Bank Ltd | Financials
+ICICIGI | ICICI Lombard General Insurance Company Ltd | Financials
+ICICIPRULI | ICICI Prudential Life Insurance Company Ltd | Financials
+INDUSINDBK | IndusInd Bank Ltd | Financials
+IRFC | Indian Railway Finance Corporation Ltd | Financials
+JIOFIN | Jio Financial Services Ltd | Financials
+KOTAKBANK | Kotak Mahindra Bank Ltd | Financials
+LICI | Life Insurance Corporation of India | Financials
+PFC | Power Finance Corporation Ltd | Financials
+PNB | Punjab National Bank | Financials
+RECLTD | REC Ltd | Financials
+SBILIFE | SBI Life Insurance Company Ltd | Financials
+SBIN | State Bank of India | Financials
+SHRIRAMFIN | Shriram Finance Ltd | Financials
+
+Balance-sheet integrity check
+
+Potential duplicate balance-sheet value pairs: 13
+These records are flagged for review only. The database was not changed.
+
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2013 | Mar 2013 | equity_capital=16.0 | reserves=1323.0 | borrowings=234.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2014 | Mar 2014 | equity_capital=16.0 | reserves=1594.0 | borrowings=110.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2015 | Mar 2015 | equity_capital=16.0 | reserves=2010.0 | borrowings=218.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2016 | Mar 2016 | equity_capital=17.0 | reserves=2108.0 | borrowings=55.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2017 | Mar 2017 | equity_capital=17.0 | reserves=3127.0 | borrowings=0.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2018 | Mar 2018 | equity_capital=17.0 | reserves=3843.0 | borrowings=0.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2019 | Mar 2019 | equity_capital=17.0 | reserves=4876.0 | borrowings=0.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2020 | Mar 2020 | equity_capital=17.0 | reserves=5387.0 | borrowings=912.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2021 | Mar 2021 | equity_capital=18.0 | reserves=7286.0 | borrowings=798.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2022 | Mar 2022 | equity_capital=30.0 | reserves=14258.0 | borrowings=258.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2023 | Mar 2023 | equity_capital=30.0 | reserves=16562.0 | borrowings=1541.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2024 | Mar 2024 | equity_capital=30.0 | reserves=19988.0 | borrowings=2071.0
+LT | Larsen & Toubro Ltd | LTIM | LTIMindtree Ltd | 2024 | Sep 2024 | equity_capital=30.0 | reserves=21045.0 | borrowings=2326.0
+
+Ratio edge cases
+
+Company: Adani Enterprises Ltd
+Company ID: ADANIENT
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 11.996819496867396
+Source ROCE: 11.6
+ROCE difference: 0.3968194968673959
+Calculated ROE: 8.534650424813185
+Source ROE: 13.64
+ROE difference: 5.105349575186816
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Adani Green Energy Ltd
+Company ID: ADANIGREEN
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 11.487173994537567
+Source ROCE: 96.5
+ROCE difference: 85.01282600546243
+Calculated ROE: 12.812690665039659
+Source ROE: 14.7
+ROE difference: 1.8873093349603405
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Adani Power Ltd
+Company ID: ADANIPOWER
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 36.15051246768946
+Source ROCE: 32.2
+ROCE difference: 3.9505124676894567
+Calculated ROE: 48.27674122146251
+Source ROE: 57.1
+ROE difference: 8.823258778537493
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Ambuja Cements Ltd
+Company ID: AMBUJACEM
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 18.505515359981022
+Source ROCE: 12.8
+ROCE difference: 5.705515359981021
+Calculated ROE: 11.428984947896565
+Source ROE: 9.24
+ROE difference: 2.1889849478965644
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Bajaj Finserv Ltd
+Company ID: BAJAJFINSV
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 11.705286304511525
+Source ROCE: 21.14
+ROCE difference: 9.434713695488476
+Calculated ROE: 25.850351412279537
+Source ROE: 11.72
+ROE difference: 14.130351412279536
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Bajaj Finance Ltd
+Company ID: BAJFINANCE
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 4.360315856037963
+Source ROCE: 11.9
+ROCE difference: 7.539684143962037
+Calculated ROE: 18.841921351830603
+Source ROE: 22.1
+ROE difference: 3.2580786481693984
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Bharat Electronics Ltd
+Company ID: BEL
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 4504.72440944882
+Source ROCE: 34.6
+ROCE difference: 4470.124409448819
+Calculated ROE: 4744.047619047619
+Source ROE: 26.3
+ROE difference: 4717.747619047619
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Bharti Airtel Ltd
+Company ID: BHARTIARTL
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 25.104372407456466
+Source ROCE: 13.1
+ROCE difference: 12.004372407456467
+Calculated ROE: 10.35839213740181
+Source ROE: 14.9
+ROE difference: 4.541607862598191
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Bosch Ltd
+Company ID: BOSCHLTD
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 30.2486986697513
+Source ROCE: 20.6
+ROCE difference: 9.648698669751298
+Calculated ROE: 20.639920424403183
+Source ROE: 16.0
+ROE difference: 4.639920424403183
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Bharat Petroleum Corporation Ltd
+Company ID: BPCL
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 36.17642090391142
+Source ROCE: 32.1
+ROCE difference: 4.076420903911419
+Calculated ROE: 35.511337343822305
+Source ROE: 41.9
+ROE difference: 6.388662656177694
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Britannia Industries Ltd
+Company ID: BRITANNIA
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 56.24375624375625
+Source ROCE: 48.9
+ROCE difference: 7.343756243756253
+Calculated ROE: 54.14869322506978
+Source ROE: 57.1
+ROE difference: 2.9513067749302238
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Cholamandalam Investment & Finance Company Ltd
+Company ID: CHOLAFIN
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 3.5107874445050236
+Source ROCE: 10.4
+ROCE difference: 6.889212555494977
+Calculated ROE: 17.455213596692694
+Source ROE: 20.2
+ROE difference: 2.7447864033073053
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Cipla Ltd
+Company ID: CIPLA
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 71.54593801577114
+Source ROCE: 22.8
+ROCE difference: 48.745938015771145
+Calculated ROE: 15.554557028383135
+Source ROE: 16.8
+ROE difference: 1.2454429716168658
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Coal India Ltd
+Company ID: COALINDIA
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 105.75106719101879
+Source ROCE: 63.6
+ROCE difference: 42.15106719101879
+Calculated ROE: 45.16982956605826
+Source ROE: 52.0
+ROE difference: 6.830170433941738
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Godrej Consumer Products Ltd
+Company ID: GODREJCP
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 4.7281921618204805
+Source ROCE: 26.49
+ROCE difference: 21.761807838179518
+Calculated ROE: -4.45308779171297
+Source ROE: 6.77
+ROE difference: 11.22308779171297
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Hindustan Aeronautics Ltd
+Company ID: HAL
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 3617.391304347826
+Source ROCE: 38.9
+ROCE difference: 3578.491304347826
+Calculated ROE: 3816.5829145728644
+Source ROE: 28.9
+ROE difference: 3787.6829145728643
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: HCL Technologies Ltd
+Company ID: HCLTECH
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 34.71042001594142
+Source ROCE: 29.6
+ROCE difference: 5.110420015941422
+Calculated ROE: 23.01393141233172
+Source ROE: 23.3
+ROE difference: 0.28606858766828225
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: HDFC Life Insurance Company Ltd
+Company ID: HDFCLIFE
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 646.4651639344262
+Source ROCE: 6.61
+ROCE difference: 639.8551639344262
+Calculated ROE: 10.732306013909723
+Source ROE: 11.4
+ROE difference: 0.6676939860902777
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Hero MotoCorp Ltd
+Company ID: HEROMOTOCO
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 177.91860147500682
+Source ROCE: 29.1
+ROCE difference: 148.81860147500683
+Calculated ROE: 21.14243742584327
+Source ROE: 22.0
+ROE difference: 0.8575625741567308
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Hindalco Industries Ltd
+Company ID: HINDALCO
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 118.21454505175322
+Source ROCE: 11.3
+ROCE difference: 106.91454505175322
+Calculated ROE: 9.567011474761177
+Source ROE: 10.2
+ROE difference: 0.6329885252388223
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Hindustan Unilever Ltd
+Company ID: HINDUNILVR
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 89.67591362756632
+Source ROCE: 27.2
+ROCE difference: 62.475913627566314
+Calculated ROE: 20.074973642078955
+Source ROE: 20.2
+ROE difference: 0.125026357921044
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: ICICI Lombard General Insurance Company Ltd
+Company ID: ICICIGI
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 146.4297385620915
+Source ROCE: 22.5
+ROCE difference: 123.9297385620915
+Calculated ROE: 15.7230643179025
+Source ROE: 17.0
+ROE difference: 1.2769356820975002
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: ICICI Prudential Life Insurance Company Ltd
+Company ID: ICICIPRULI
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 754.8873412535846
+Source ROCE: 8.75
+ROCE difference: 746.1373412535846
+Calculated ROE: 7.732848705134029
+Source ROE: 8.07
+ROE difference: 0.3371512948659712
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Interglobe Aviation Ltd
+Company ID: INDIGO
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 5643.454935622318
+Source ROCE: 24.5
+ROCE difference: 5618.954935622318
+Calculated ROE: 892.568306010929
+Source ROE: None
+ROE difference: None
+Category: DATA_SOURCE_ISSUE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Indian Railway Catering & Tourism Corporation Ltd
+Company ID: IRCTC
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 47.78115501519757
+Source ROCE: 53.8
+ROCE difference: 6.018844984802428
+Calculated ROE: 34.39628482972136
+Source ROE: 40.4
+ROE difference: 6.003715170278639
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Life Insurance Corporation of India
+Company ID: LICI
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 57.534412123702374
+Source ROCE: 63.79
+ROCE difference: 6.255587876297625
+Calculated ROE: 49.44710986501021
+Source ROE: 63.61
+ROE difference: 14.162890134989787
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Larsen & Toubro Ltd
+Company ID: LT
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 152.61895060890035
+Source ROCE: 17.18
+ROCE difference: 135.43895060890034
+Calculated ROE: 77.66510140873214
+Source ROE: 10.49
+ROE difference: 67.17510140873215
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Mahindra & Mahindra Ltd
+Company ID: M&M
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 16.123589400412953
+Source ROCE: 26.98
+ROCE difference: 10.856410599587047
+Calculated ROE: 18.537543435564285
+Source ROE: 17.99
+ROE difference: 0.5475434355642861
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Samvardhana Motherson International Ltd
+Company ID: MOTHERSON
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 20.535191093170127
+Source ROCE: 13.7
+ROCE difference: 6.835191093170128
+Calculated ROE: 11.546549416937488
+Source ROE: 11.8
+ROE difference: 0.2534505830625129
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Nestle India Ltd
+Company ID: NESTLEIND
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 162.06241519674356
+Source ROCE: 185.43
+ROCE difference: 23.36758480325645
+Calculated ROE: 117.75449101796407
+Source ROE: 135.61
+ROE difference: 17.855508982035943
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Power Finance Corporation Ltd
+Company ID: PFC
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 3.493066198183381
+Source ROCE: 9.96
+ROCE difference: 6.466933801816619
+Calculated ROE: 26.1609340860332
+Source ROE: 19.49
+ROE difference: 6.670934086033203
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Punjab National Bank
+Company ID: PNB
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: None
+Source ROCE: 1.63
+ROCE difference: None
+Calculated ROE: 61.320565191187306
+Source ROE: 8.7
+ROE difference: 52.62056519118731
+Category: DATA_SOURCE_ISSUE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Power Grid Corporation of India Ltd
+Company ID: POWERGRID
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 19.16909551793869
+Source ROCE: 13.2
+ROCE difference: 5.96909551793869
+Calculated ROE: 17.870011245496066
+Source ROE: 19.0
+ROE difference: 1.129988754503934
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Shree Cement Ltd
+Company ID: SHREECEM
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 22.876693948745473
+Source ROCE: 14.8
+ROCE difference: 8.076693948745472
+Calculated ROE: 8.370767521615225
+Source ROE: 12.2
+ROE difference: 3.8292324783847747
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Shriram Finance Ltd
+Company ID: SHRIRAMFIN
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 4.315116407506045
+Source ROCE: 11.3
+ROCE difference: 6.984883592493956
+Calculated ROE: 15.116350338120824
+Source ROE: 15.9
+ROE difference: 0.783649661879176
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Tata Motors Ltd
+Company ID: TATAMOTORS
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 33.93225101467374
+Source ROCE: 20.1
+ROCE difference: 13.832251014673737
+Calculated ROE: 37.45613415294755
+Source ROE: 49.4
+ROE difference: 11.94386584705245
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Tata Power Company Ltd
+Company ID: TATAPOWER
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 16.44604567377535
+Source ROCE: 11.1
+ROCE difference: 5.346045673775352
+Calculated ROE: 13.227840276919272
+Source ROE: 11.3
+ROE difference: 1.9278402769192713
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Tata Steel Ltd
+Company ID: TATASTEEL
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 9.068374302829994
+Source ROCE: 7.02
+ROCE difference: 2.0483743028299948
+Calculated ROE: -5.334926929972293
+Source ROE: 6.55
+ROE difference: 11.884926929972293
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Tata Consultancy Services Ltd
+Company ID: TCS
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 68.78489493452442
+Source ROCE: 64.3
+ROCE difference: 4.484894934524419
+Calculated ROE: 50.944313673485176
+Source ROE: 0.52
+ROE difference: 50.42431367348517
+Category: DATA_SOURCE_ISSUE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Tech Mahindra Ltd
+Company ID: TECHM
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 18.60234198452373
+Source ROCE: 11.9
+ROCE difference: 6.702341984523729
+Calculated ROE: 8.987963553189097
+Source ROE: 8.63
+ROE difference: 0.3579635531890961
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Torrent Pharmaceuticals Ltd
+Company ID: TORNTPHARM
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 32.3037323037323
+Source ROCE: 23.2
+ROCE difference: 9.103732303732304
+Calculated ROE: 24.154025670945156
+Source ROE: 24.2
+ROE difference: 0.04597432905484311
+Category: VERSION_DIFFERENCE
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Company: Trent Ltd
+Company ID: TRENT
+Year: 2024
+Period: Mar 2024
+Calculated ROCE: 50.85036935234496
+Source ROCE: 23.8
+ROCE difference: 27.050369352344962
+Calculated ROE: 36.30776794493609
+Source ROE: 27.2
+ROE difference: 9.10776794493609
+Category: FORMULA_DISCREPANCY
+Note: The ratio engine value is used for analytics. The companies.xlsx value is used only for source comparison.
+
+Total ratio edge cases: 42
+ROCE anomalies greater than 5: 36
+ROE anomalies greater than 5: 18
+
+Category definitions
+
+DATA_SOURCE_ISSUE: The source value is missing, clearly incorrect, or the calculated value cannot be produced from the available data.
+VERSION_DIFFERENCE: The calculated and source values differ by more than the configured threshold but not enough to indicate a major formula or denominator difference.
+FORMULA_DISCREPANCY: The difference is large enough to suggest materially different calculation definitions or denominator treatment.
+NO_ANOMALY: The calculated and source values are within the configured threshold.
+
+ANALYTICS RULE
+
+The ratio engine calculation is used for analytics. The companies.xlsx value is used only as a source comparison reference.
+
+DATA QUALITY RULE
+
+Balance-sheet integrity checks are audit-only. The script does not modify financial records.
