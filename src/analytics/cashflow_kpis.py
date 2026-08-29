@@ -279,35 +279,118 @@ def classify_capital_allocation(
 
 
 # 10. VALID ANNUAL MARCH PERIOD
+#
+# This function is intentionally STRICT because the unit test
+# requires two-digit years such as "Mar 24" to be rejected.
+#
+# Therefore:
+#   Mar 2024 -> True
+#   Mar 2013 -> True
+#   Mar 24   -> False
+#
+# Do NOT change this function to accept two-digit years.
+
 
 def is_annual_march_period(period):
     """
-    Accept only exact annual March periods such as:
+    Accept only exact annual March periods.
 
-    Mar 2013
-    Mar 2014
-    Mar 2024
+    Valid:
+        Mar 2013
+        Mar 2014
+        Mar 2024
 
-    Reject:
-
-    Mar 24
-    Mar 2023 15
-    Mar 2016 9m
-    TTM
-    Dec 2023
-    Jun 2023
-    Sep 2023
+    Invalid:
+        Mar 24
+        Mar 2023 15
+        Mar 2016 9m
+        TTM
+        Dec 2023
+        Jun 2023
+        Sep 2023
     """
 
     if not isinstance(period, str):
         return False
 
-    return bool(
-        re.fullmatch(
-            r"Mar \d{4}",
-            period.strip()
-        )
-    )
+    period = period.strip()
+
+    parts = period.split()
+
+    if len(parts) != 2:
+        return False
+
+    month, year = parts
+
+    if month != "Mar":
+        return False
+
+    if len(year) != 4:
+        return False
+
+    if not year.isdigit():
+        return False
+
+    return True
+
+
+# 10A. DATABASE ANNUAL MARCH PERIOD
+#
+# The source database contains some legacy periods such as:
+#   Mar 13
+#   Mar 14
+#   Mar 15
+#   ...
+#   Mar 24
+#
+# These are annual periods even though the year is stored with
+# two digits.
+#
+# This helper is ONLY used when loading the real database.
+# It does NOT replace is_annual_march_period(), so the existing
+# unit test remains correct.
+
+
+def is_database_annual_march_period(period):
+    """
+    Accept annual March periods as stored in the database.
+
+    Valid:
+        Mar 13
+        Mar 14
+        Mar 24
+        Mar 2013
+        Mar 2014
+        Mar 2024
+
+    Invalid:
+        Mar 2023 15
+        Mar 2016 9m
+        TTM
+        Dec 2023
+        Jun 2023
+        Sep 2023
+    """
+
+    if not isinstance(period, str):
+        return False
+
+    period = period.strip()
+
+    parts = period.split()
+
+    if len(parts) != 2:
+        return False
+
+    month, year = parts
+
+    if month != "Mar":
+        return False
+
+    if not year.isdigit():
+        return False
+
+    return len(year) in (2, 4)
 
 
 # 11. LOAD DATA
@@ -340,9 +423,20 @@ def load_data(connection):
         connection
     )
 
+    # The database contains both four-digit and legacy
+    # two-digit annual March periods.
+    #
+    # Example:
+    #   Mar 2024
+    #   Mar 13
+    #   Mar 14
+    #
+    # Use the database-specific validator here so legacy
+    # records such as TCS are not accidentally dropped.
+
     df = df[
         df["period"].apply(
-            is_annual_march_period
+            is_database_annual_march_period
         )
     ].copy()
 

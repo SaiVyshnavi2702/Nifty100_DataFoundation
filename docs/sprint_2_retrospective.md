@@ -178,11 +178,11 @@ A separate check was also performed using the main quick-filter conditions of RO
 
 
 
-This check returned 36 companies, which is within the required range of 15–50 companies.
+This check returned 37 companies, which is within the required range of 15–50 companies.
 
 
 
-The resulting companies come from different sectors, including technology, pharmaceuticals, automobiles, consumer goods, industrials, financial services, and other areas. This makes the result a reasonably diversified candidate set.
+The quick-filter returned 37 companies, which is within the required 15–50 range. The result provides a manageable candidate set for further fundamental analysis.
 
 
 
@@ -205,9 +205,7 @@ ADANIGREEN
 ADANIPORTS
 
 
-
-The demo showed that the table contains the calculated profitability, leverage, interest coverage, efficiency, cash-flow, per-share, growth, and composite-score KPIs.
-
+The demo showed that the financial_ratios table contains the calculated profitability, leverage, interest coverage, efficiency, cash-flow, per-share, growth, and composite-score KPIs.
 
 
 The demo also showed why the KPIs should be considered together. For example, a company may have strong revenue or profit growth but still fail the overall screen because of high debt or weak interest coverage.
@@ -221,7 +219,7 @@ The demo also showed why the KPIs should be considered together. For example, a 
 * Edge cases were recorded with clear categories.
 * Missing data is marked as INSUFFICIENT_DATA instead of being treated as a passing result.
 * The screener produces a manageable number of companies for further review.
-* Latest annual data can be retrieved consistently from the financial\_ratios table.
+* Latest annual data can be retrieved consistently from the financial_ratios table.
 
 
 
@@ -242,7 +240,7 @@ Overall, Sprint 2 successfully completed the financial-ratio calculation, testin
 
 
 
-The project now has a tested ratio engine, documented edge-case handling, a working fundamental screener, and a usable financial\_ratios dataset for demonstration.
+The project now has a tested ratio engine, documented edge-case handling, a working fundamental screener, and a usable financial_ratios dataset for demonstration.
 
 
 

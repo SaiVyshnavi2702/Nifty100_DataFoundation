@@ -9,8 +9,18 @@ from src.analytics.cashflow_kpis import calculate_free_cash_flow
 DB_PATH = "data/nifty100.db"
 
 
-def is_annual_march_period(period):
-    """Check whether the period is a valid annual March period."""
+def is_annual_period(period):
+    """
+    Return True only for full-year Mar/Jun/Sep/Dec periods.
+
+    Examples:
+        Mar 2024 -> True
+        Jun 2024 -> True
+        Sep 2024 -> True
+        Dec 2024 -> True
+        Mar 24   -> False
+        TTM      -> False
+    """
 
     if not isinstance(period, str):
         return False
@@ -19,7 +29,7 @@ def is_annual_march_period(period):
 
     return (
         len(parts) == 2
-        and parts[0] == "Mar"
+        and parts[0] in {"Mar", "Jun", "Sep", "Dec"}
         and parts[1].isdigit()
         and len(parts[1]) == 4
     )
@@ -64,10 +74,22 @@ def calculate_book_value_per_share(
 
 def get_annual_financial_rows(connection):
     """
-    Get annual March financial data required for Day 12.
+    Get annual financial data required for Day 12.
 
-    Only exact annual March periods are accepted.
-    TTM, quarterly and partial-year periods are ignored.
+    P&L and Balance Sheet use periods such as:
+        Mar 2024
+
+    Cashflow data may use abbreviated periods such as:
+        Mar 24
+
+    Therefore cashflow is joined using:
+        company_id
+        year
+        month prefix
+
+    rather than requiring the exact period string to match.
+
+    TTM, quarterly and partial-year P&L periods are ignored.
     """
 
     rows = connection.execute(
@@ -100,6 +122,7 @@ def get_annual_financial_rows(connection):
 
         LEFT JOIN balancesheet AS b
             ON p.company_id = b.company_id
+            AND p.year = b.year
             AND p.period = b.period
 
         LEFT JOIN companies AS c
@@ -107,9 +130,22 @@ def get_annual_financial_rows(connection):
 
         LEFT JOIN cashflow AS cf
             ON p.company_id = cf.company_id
-            AND p.period = cf.period
+            AND p.year = cf.year
 
-        WHERE p.period LIKE 'Mar %'
+            /*
+                P&L:
+                    Mar 2024
+
+                Cashflow:
+                    Mar 24
+
+                Match the period month instead of the exact
+                period string.
+            */
+            AND substr(p.period, 1, 3) =
+                substr(cf.period, 1, 3)
+
+        WHERE p.period != 'TTM'
 
         ORDER BY
             p.company_id,
@@ -120,7 +156,7 @@ def get_annual_financial_rows(connection):
     return [
         row
         for row in rows
-        if is_annual_march_period(row[2])
+        if is_annual_period(row[2])
     ]
 
 
@@ -139,7 +175,9 @@ def calculate_day12_kpis(
     operating_activity,
     investing_activity,
 ):
-    """Calculate all Day 12 KPI values for one company/year."""
+    """
+    Calculate all Day 12 KPI values for one company/year.
+    """
 
     ratios = calculate_company_ratios(
         company_id,
@@ -234,7 +272,9 @@ def save_financial_ratio(
     period,
     kpis,
 ):
-    """Insert or update one financial_ratios row."""
+    """
+    Insert or update one financial_ratios row.
+    """
 
     connection.execute(
         """
@@ -358,7 +398,9 @@ def save_financial_ratio(
 
 
 def populate_financial_ratios(db_path=DB_PATH):
-    """Populate the financial_ratios table for all annual March data."""
+    """
+    Populate the financial_ratios table for all annual periods.
+    """
 
     connection = sqlite3.connect(db_path)
 
@@ -367,7 +409,7 @@ def populate_financial_ratios(db_path=DB_PATH):
 
         print("DAY 12 - FINANCIAL RATIOS")
         print("--------------------------------")
-        print("Annual March source rows:", len(rows))
+        print("Annual source rows:", len(rows))
 
         processed = 0
         scored = 0
@@ -439,6 +481,8 @@ def populate_financial_ratios(db_path=DB_PATH):
 
         print("Rows processed:", processed)
         print("Rows with quality score:", scored)
+
+        
         print("Final financial_ratios rows:", final_count)
 
     finally:

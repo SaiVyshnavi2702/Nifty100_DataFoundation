@@ -164,15 +164,15 @@ Result: PASS
 
 The financial ratios table was checked after running the ratio engine.
 
-Financial ratios rows: 1,149
+Financial ratios rows: 1,161
 
-Distinct companies: 99
+Rows processed: 1,161
 
-Rows with composite quality score: 577
+Rows with composite quality score: 581
 
 The required minimum row count was 1,100.
 
-Since the table contains 1,149 rows, the row count requirement is satisfied.
+Since the table contains 1,161 rows, the row count requirement is satisfied.
 
 Result: PASS
 
