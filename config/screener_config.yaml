@@ -1,0 +1,24 @@
+filters:
+  roe_min: null
+  debt_to_equity_max: null
+  free_cash_flow_min: null
+  revenue_cagr_5yr_min: null
+  pat_cagr_5yr_min: null
+  operating_profit_margin_min: null
+  pe_ratio_max: null
+  pb_ratio_max: null
+  dividend_yield_min: null
+  interest_coverage_min: null
+  market_cap_min: null
+  net_profit_min: null
+  eps_cagr_min: null
+  asset_turnover_min: null
+  sales_min: null
+
+options:
+  exclude_financials_from_de_filter: true
+  debt_free_icr_passes: true
+
+sort:
+  column: composite_quality_score
+  ascending: false
