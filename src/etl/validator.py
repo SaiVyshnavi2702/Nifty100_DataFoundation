@@ -2,8 +2,13 @@ import os
 import math
 import pandas as pd
 
-from loader import FILES
-from normaliser import normalize_year, normalize_column_name
+try:
+    from .loader import FILES
+    from .normaliser import normalize_year, normalize_column_name
+except ImportError:
+    from loader import FILES
+    from normaliser import normalize_year, normalize_column_name
+
 
 
 FAILURE_FILE = "validation_failures.csv"

@@ -2,12 +2,22 @@ import os
 import sqlite3
 import pandas as pd
 
-from normaliser import (
-    normalize_year,
-    normalize_period,
-    normalize_ticker,
-    normalize_column_name,
-)
+
+try:
+    from .normaliser import (
+        normalize_year,
+        normalize_period,
+        normalize_ticker,
+        normalize_column_name,
+    )
+except ImportError:
+    from normaliser import (
+        normalize_year,
+        normalize_period,
+        normalize_ticker,
+        normalize_column_name,
+    )
+
 
 
 CORE_PATH = os.path.join("data", "raw", "core")
