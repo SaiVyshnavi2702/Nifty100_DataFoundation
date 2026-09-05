@@ -60,6 +60,7 @@ def _strict_min(df, column, threshold):
     """
     Keep non-null values strictly greater than threshold.
     """
+
     return df[
         df[column].notna()
         & (df[column] > threshold)
@@ -70,9 +71,44 @@ def _strict_max(df, column, threshold):
     """
     Keep non-null values strictly less than threshold.
     """
+
     return df[
         df[column].notna()
         & (df[column] < threshold)
+    ].copy()
+
+
+def _de_max_excluding_financials(df, threshold):
+    """
+    Apply a strict D/E maximum while exempting Financials.
+
+    Project configuration:
+        exclude_financials_from_de_filter: true
+
+    Non-financial companies must satisfy:
+        D/E < threshold
+
+    Financials are allowed through without applying the D/E filter.
+    """
+
+    if threshold is None:
+        return df.copy()
+
+    financials = (
+        df["broad_sector"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .eq("financials")
+    )
+
+    return df[
+        financials
+        | (
+            df["debt_to_equity"].notna()
+            & (df["debt_to_equity"] < threshold)
+        )
     ].copy()
 
 
@@ -80,6 +116,7 @@ def _sort(df):
     """
     Sort by the existing Day 15 composite quality score when available.
     """
+
     if "composite_quality_score" not in df.columns:
         return df.reset_index(drop=True)
 
@@ -112,9 +149,8 @@ def quality_compounder(df):
         15
     )
 
-    result = _strict_max(
+    result = _de_max_excluding_financials(
         result,
-        "debt_to_equity",
         1.0
     )
 
@@ -158,9 +194,8 @@ def value_pick(df):
         3.0
     )
 
-    result = _strict_max(
+    result = _de_max_excluding_financials(
         result,
-        "debt_to_equity",
         2.0
     )
 
@@ -197,9 +232,8 @@ def growth_accelerator(df):
         15
     )
 
-    result = _strict_max(
+    result = _de_max_excluding_financials(
         result,
-        "debt_to_equity",
         2.0
     )
 
@@ -251,6 +285,9 @@ def debt_free_blue_chip(df):
 
     result = _latest_per_company(df)
 
+    # Exact requirement: D/E = 0.
+    # Financials exemption does NOT apply here because
+    # this preset specifically requires zero D/E.
     result = result[
         result["debt_to_equity"].notna()
         & (result["debt_to_equity"] == 0)

@@ -190,25 +190,18 @@ The quick-filter returned 37 companies, which is within the required 15–50 ran
 
 
 
-The financial_ratios table was also reviewed using the latest annual March 2024 data for five companies:
-
-
+For the planned team-lead demo, I identified five companies from the financial_ratios table using the latest annual March 2024 data:
 
 ABB
-
 ADANIENSOL
-
 ADANIENT
-
 ADANIGREEN
-
 ADANIPORTS
+The financial_ratios table contains the calculated profitability, leverage, interest coverage, efficiency, cash-flow, per-share, growth, and composite-score KPIs.
 
+The planned demo will use these five companies to show the computed KPI values and explain how the different metrics work together. For example, a company may have strong revenue or profit growth but still fail the overall screen because of high debt or weak interest coverage.
 
-The demo showed that the financial_ratios table contains the calculated profitability, leverage, interest coverage, efficiency, cash-flow, per-share, growth, and composite-score KPIs.
-
-
-The demo also showed why the KPIs should be considered together. For example, a company may have strong revenue or profit growth but still fail the overall screen because of high debt or weak interest coverage.
+The five-company financial_ratios demo is still pending and will be presented to the team lead once the review meeting is scheduled.
 
 
 
@@ -233,16 +226,11 @@ The demo also showed why the KPIs should be considered together. For example, a 
 
 
 ## Sprint 2 Outcome
-
-
-
 Overall, Sprint 2 successfully completed the financial-ratio calculation, testing, edge-case review, and fundamental screening workflow.
-
-
 
 The project now has a tested ratio engine, documented edge-case handling, a working fundamental screener, and a usable financial_ratios dataset for demonstration.
 
-
+The remaining Sprint 2 activity is the team-lead demo of the financial_ratios table. The demo will cover five companies and their computed KPIs once the review meeting is scheduled.
 
 Final automated test result: 111 passed, 0 failures.
 
