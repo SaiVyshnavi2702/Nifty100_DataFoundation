@@ -172,4 +172,55 @@ def get_valuation(ticker):
         (ticker,),
     )
 
+@st.cache_data(ttl=600)
+def get_pros_and_cons(ticker):
+    """Return the pros and cons for a company."""
+    return _query(
+        """
+        SELECT
+            pc.pros,
+            pc.cons,
+            c.company_name
+        FROM prosandcons pc
+        JOIN companies c
+            ON c.id = pc.company_id
+        WHERE c.company_name = ?
+        """,
+        (ticker,),
+    )
 
+
+@st.cache_data(ttl=600)
+def get_company_sector(ticker):
+    """Return sector information for a company."""
+    return _query(
+        """
+        SELECT
+            s.broad_sector,
+            s.sub_sector,
+            c.company_name
+        FROM sectors s
+        JOIN companies c
+            ON c.id = s.company_id
+        WHERE c.company_name = ?
+        """,
+        (ticker,),
+    )
+
+
+@st.cache_data(ttl=600)
+def get_market_data(ticker):
+    """Return valuation data for a company."""
+    return _query(
+        """
+        SELECT
+            mc.*,
+            c.company_name
+        FROM market_cap mc
+        JOIN companies c
+            ON c.id = mc.company_id
+        WHERE c.company_name = ?
+        ORDER BY mc.year DESC
+        """,
+        (ticker,),
+    )
