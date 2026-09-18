@@ -1,24 +1,57 @@
 import os
-import re
 import sqlite3
+import math
 import pandas as pd
 
 
 DB_PATH = "data/nifty100.db"
-OUTPUT_PATH = "output/capital_allocation.csv"
+
+CAPITAL_ALLOCATION_OUTPUT = "output/capital_allocation.csv"
+INTELLIGENCE_OUTPUT = "output/cashflow_intelligence.xlsx"
+DISTRESS_OUTPUT = "output/distress_alerts.csv"
 
 
-# 1. FREE CASH FLOW
+def safe_float(value):
+    if value is None:
+        return None
+
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if math.isnan(value):
+        return None
+
+    return value
+
+
+def get_cashflow_sign(value):
+    value = safe_float(value)
+
+    if value is None:
+        return "0"
+
+    if value > 0:
+        return "+"
+
+    if value < 0:
+        return "-"
+
+    return "0"
+
 
 def calculate_free_cash_flow(
     operating_activity,
     investing_activity
 ):
-    """
-    FCF = Operating Activity + Investing Activity.
+    operating_activity = safe_float(
+        operating_activity
+    )
 
-    Negative FCF is allowed.
-    """
+    investing_activity = safe_float(
+        investing_activity
+    )
 
     if operating_activity is None:
         return None
@@ -26,17 +59,18 @@ def calculate_free_cash_flow(
     if investing_activity is None:
         return None
 
-    return operating_activity + investing_activity
+    return (
+        operating_activity
+        + investing_activity
+    )
 
 
-# 2. CFO / PAT RATIO
-
-def calculate_cfo_pat_ratio(cfo, pat):
-    """
-    CFO / PAT.
-
-    Return None when PAT is zero or data is missing.
-    """
+def calculate_cfo_pat_ratio(
+    cfo,
+    pat
+):
+    cfo = safe_float(cfo)
+    pat = safe_float(pat)
 
     if cfo is None:
         return None
@@ -50,21 +84,10 @@ def calculate_cfo_pat_ratio(cfo, pat):
     return cfo / pat
 
 
-# 3. FIVE-YEAR ROLLING CFO QUALITY SCORE
-
-def calculate_cfo_quality_score(rows, current_year):
-    """
-    Calculate the average CFO/PAT ratio over the current year
-    and the previous four available annual years.
-
-    The score is calculated separately for every company/year.
-
-    PAT = 0 years are excluded because CFO/PAT is undefined.
-
-    A score is returned only when there are valid CFO/PAT
-    observations in the five-year window.
-    """
-
+def calculate_cfo_quality_score(
+    rows,
+    current_year
+):
     if not rows:
         return None
 
@@ -76,7 +99,8 @@ def calculate_cfo_quality_score(rows, current_year):
     eligible_rows = [
         row
         for row in rows
-        if row["year"] <= current_year
+        if safe_float(row["year"]) is not None
+        and int(row["year"]) <= int(current_year)
     ]
 
     latest_five = eligible_rows[-5:]
@@ -84,7 +108,6 @@ def calculate_cfo_quality_score(rows, current_year):
     ratios = []
 
     for row in latest_five:
-
         ratio = calculate_cfo_pat_ratio(
             row["operating_activity"],
             row["net_profit"]
@@ -99,14 +122,8 @@ def calculate_cfo_quality_score(rows, current_year):
     return sum(ratios) / len(ratios)
 
 
-# 4. CFO QUALITY CLASSIFICATION
-
 def classify_cfo_quality(score):
-    """
-    > 1.0 = High Quality
-    0.5 - 1.0 = Moderate
-    < 0.5 = Accrual Risk
-    """
+    score = safe_float(score)
 
     if score is None:
         return None
@@ -120,17 +137,15 @@ def classify_cfo_quality(score):
     return "Accrual Risk"
 
 
-# 5. CAPEX INTENSITY
-
 def calculate_capex_intensity(
     investing_activity,
     sales
 ):
-    """
-    abs(investing_activity) / sales * 100.
+    investing_activity = safe_float(
+        investing_activity
+    )
 
-    Return None when sales is zero or missing.
-    """
+    sales = safe_float(sales)
 
     if investing_activity is None:
         return None
@@ -143,19 +158,13 @@ def calculate_capex_intensity(
 
     return (
         abs(investing_activity)
-        / sales
+        / abs(sales)
         * 100
     )
 
 
-# 6. CAPEX CLASSIFICATION
-
 def classify_capex_intensity(value):
-    """
-    < 3% = Asset Light
-    3% - 8% = Moderate
-    > 8% = Capital Intensive
-    """
+    value = safe_float(value)
 
     if value is None:
         return None
@@ -169,17 +178,17 @@ def classify_capex_intensity(value):
     return "Capital Intensive"
 
 
-# 7. FCF CONVERSION RATE
-
 def calculate_fcf_conversion_rate(
     free_cash_flow,
     operating_profit
 ):
-    """
-    FCF / Operating Profit * 100.
+    free_cash_flow = safe_float(
+        free_cash_flow
+    )
 
-    Return None when operating profit is zero.
-    """
+    operating_profit = safe_float(
+        operating_profit
+    )
 
     if free_cash_flow is None:
         return None
@@ -197,28 +206,72 @@ def calculate_fcf_conversion_rate(
     )
 
 
-# 8. CASH FLOW SIGN
+def calculate_fcf_cagr_5yr(
+    rows,
+    current_year
+):
+    if not rows:
+        return None
 
-def get_cashflow_sign(value):
-    """
-    Positive = +
-    Negative = -
-    Zero = 0
-    """
+    rows = sorted(
+        rows,
+        key=lambda row: row["year"]
+    )
 
-    if value is None:
-        return "0"
+    eligible_rows = [
+        row
+        for row in rows
+        if safe_float(row["year"]) is not None
+        and int(row["year"]) <= int(current_year)
+    ]
 
-    if value > 0:
-        return "+"
+    if len(eligible_rows) < 6:
+        return None
 
-    if value < 0:
-        return "-"
+    current_row = eligible_rows[-1]
 
-    return "0"
+    current_fcf = calculate_free_cash_flow(
+        current_row["operating_activity"],
+        current_row["investing_activity"]
+    )
 
+    if current_fcf is None:
+        return None
 
-# 9. CAPITAL ALLOCATION CLASSIFIER
+    target_year = int(current_year) - 5
+
+    previous_rows = [
+        row
+        for row in eligible_rows
+        if int(row["year"]) <= target_year
+    ]
+
+    if not previous_rows:
+        return None
+
+    previous_row = previous_rows[-1]
+
+    previous_fcf = calculate_free_cash_flow(
+        previous_row["operating_activity"],
+        previous_row["investing_activity"]
+    )
+
+    if previous_fcf is None:
+        return None
+
+    if previous_fcf <= 0:
+        return None
+
+    if current_fcf <= 0:
+        return None
+
+    cagr = (
+        (current_fcf / previous_fcf) ** (1 / 5)
+        - 1
+    ) * 100
+
+    return cagr
+
 
 def classify_capital_allocation(
     cfo,
@@ -226,17 +279,6 @@ def classify_capital_allocation(
     cff,
     cfo_quality_score=None
 ):
-    """
-    (+,-,-) with high CFO Quality Score = Shareholder Returns
-    (+,-,-) = Reinvestor
-    (+,+,-) = Liquidating Assets
-    (-,+,+) = Distress Signal
-    (-,-,+) = Growth Funded by Debt
-    (+,+,+) = Cash Accumulator
-    (-,-,-) = Pre-Revenue
-    (+,-,+) = Mixed
-    """
-
     cfo_sign = get_cashflow_sign(cfo)
     cfi_sign = get_cashflow_sign(cfi)
     cff_sign = get_cashflow_sign(cff)
@@ -248,10 +290,13 @@ def classify_capital_allocation(
     )
 
     if pattern == ("+", "-", "-"):
+        score = safe_float(
+            cfo_quality_score
+        )
 
         if (
-            cfo_quality_score is not None
-            and cfo_quality_score > 1.0
+            score is not None
+            and score > 1.0
         ):
             return "Shareholder Returns"
 
@@ -278,38 +323,7 @@ def classify_capital_allocation(
     return "Mixed"
 
 
-# 10. VALID ANNUAL MARCH PERIOD
-#
-# This function is intentionally STRICT because the unit test
-# requires two-digit years such as "Mar 24" to be rejected.
-#
-# Therefore:
-#   Mar 2024 -> True
-#   Mar 2013 -> True
-#   Mar 24   -> False
-#
-# Do NOT change this function to accept two-digit years.
-
-
 def is_annual_march_period(period):
-    """
-    Accept only exact annual March periods.
-
-    Valid:
-        Mar 2013
-        Mar 2014
-        Mar 2024
-
-    Invalid:
-        Mar 24
-        Mar 2023 15
-        Mar 2016 9m
-        TTM
-        Dec 2023
-        Jun 2023
-        Sep 2023
-    """
-
     if not isinstance(period, str):
         return False
 
@@ -334,44 +348,7 @@ def is_annual_march_period(period):
     return True
 
 
-# 10A. DATABASE ANNUAL MARCH PERIOD
-#
-# The source database contains some legacy periods such as:
-#   Mar 13
-#   Mar 14
-#   Mar 15
-#   ...
-#   Mar 24
-#
-# These are annual periods even though the year is stored with
-# two digits.
-#
-# This helper is ONLY used when loading the real database.
-# It does NOT replace is_annual_march_period(), so the existing
-# unit test remains correct.
-
-
 def is_database_annual_march_period(period):
-    """
-    Accept annual March periods as stored in the database.
-
-    Valid:
-        Mar 13
-        Mar 14
-        Mar 24
-        Mar 2013
-        Mar 2014
-        Mar 2024
-
-    Invalid:
-        Mar 2023 15
-        Mar 2016 9m
-        TTM
-        Dec 2023
-        Jun 2023
-        Sep 2023
-    """
-
     if not isinstance(period, str):
         return False
 
@@ -384,7 +361,7 @@ def is_database_annual_march_period(period):
 
     month, year = parts
 
-    if month != "Mar":
+    if month not in ("Mar", "Jun", "Sep", "Dec"):
         return False
 
     if not year.isdigit():
@@ -393,10 +370,21 @@ def is_database_annual_march_period(period):
     return len(year) in (2, 4)
 
 
-# 11. LOAD DATA
+def normalize_year(value):
+    value = safe_float(value)
+
+    if value is None:
+        return None
+
+    year = int(value)
+
+    if 0 <= year <= 99:
+        return 2000 + year
+
+    return year
+
 
 def load_data(connection):
-
     query = """
         SELECT
             cf.company_id,
@@ -407,12 +395,20 @@ def load_data(connection):
             cf.financing_activity,
             pl.sales,
             pl.operating_profit,
-            pl.net_profit
+            pl.net_profit,
+            bs.borrowings,
+            s.broad_sector AS sector
         FROM cashflow cf
         LEFT JOIN profitandloss pl
             ON cf.company_id = pl.company_id
             AND cf.year = pl.year
-            AND cf.period = pl.period
+            
+        LEFT JOIN balancesheet bs
+            ON cf.company_id = bs.company_id
+            AND cf.year = bs.year
+            
+        LEFT JOIN sectors s
+            ON cf.company_id = s.company_id
         ORDER BY
             cf.company_id,
             cf.year
@@ -423,33 +419,37 @@ def load_data(connection):
         connection
     )
 
-    # The database contains both four-digit and legacy
-    # two-digit annual March periods.
-    #
-    # Example:
-    #   Mar 2024
-    #   Mar 13
-    #   Mar 14
-    #
-    # Use the database-specific validator here so legacy
-    # records such as TCS are not accidentally dropped.
-
     df = df[
         df["period"].apply(
             is_database_annual_march_period
         )
     ].copy()
 
+    df["year"] = df["year"].apply(
+        normalize_year
+    )
+
+    df = df[
+        df["year"].notna()
+    ].copy()
+
+    df["year"] = df["year"].astype(int)
+
+    df.sort_values(
+        ["company_id", "year"],
+        inplace=True
+    )
+
+    df.reset_index(
+        drop=True,
+        inplace=True
+    )
+
     return df
 
 
-# 12. CALCULATE KPIs
-
 def calculate_kpis(df):
-
     df = df.copy()
-
-    # Free Cash Flow
 
     df["free_cash_flow"] = df.apply(
         lambda row: calculate_free_cash_flow(
@@ -459,8 +459,6 @@ def calculate_kpis(df):
         axis=1
     )
 
-    # Annual CFO/PAT ratio
-
     df["cfo_pat_ratio"] = df.apply(
         lambda row: calculate_cfo_pat_ratio(
             row["operating_activity"],
@@ -469,21 +467,17 @@ def calculate_kpis(df):
         axis=1
     )
 
-    # Five-year rolling CFO Quality Score
-
     df["cfo_quality_score"] = None
 
     for company_id, group in df.groupby(
         "company_id",
         sort=False
     ):
-
         group_rows = group.to_dict(
             "records"
         )
 
         for index, row in group.iterrows():
-
             score = calculate_cfo_quality_score(
                 group_rows,
                 int(row["year"])
@@ -494,15 +488,11 @@ def calculate_kpis(df):
                 "cfo_quality_score"
             ] = score
 
-    # CFO Quality Label
-
     df["cfo_quality_label"] = df[
         "cfo_quality_score"
     ].apply(
         classify_cfo_quality
     )
-
-    # CapEx Intensity
 
     df["capex_intensity_pct"] = df.apply(
         lambda row: calculate_capex_intensity(
@@ -512,15 +502,11 @@ def calculate_kpis(df):
         axis=1
     )
 
-    # CapEx Intensity Label
-
     df["capex_intensity_label"] = df[
         "capex_intensity_pct"
     ].apply(
         classify_capex_intensity
     )
-
-    # FCF Conversion Rate
 
     df["fcf_conversion_rate_pct"] = df.apply(
         lambda row: calculate_fcf_conversion_rate(
@@ -529,8 +515,6 @@ def calculate_kpis(df):
         ),
         axis=1
     )
-
-    # Cash flow signs
 
     df["cfo_sign"] = df[
         "operating_activity"
@@ -550,8 +534,6 @@ def calculate_kpis(df):
         get_cashflow_sign
     )
 
-    # Capital allocation pattern
-
     df["pattern_label"] = df.apply(
         lambda row: classify_capital_allocation(
             row["operating_activity"],
@@ -565,10 +547,150 @@ def calculate_kpis(df):
     return df
 
 
-# 13. GENERATE REQUIRED CSV
+def build_cashflow_intelligence(df):
+    output_rows = []
+
+    for company_id, group in df.groupby(
+        "company_id",
+        sort=False
+    ):
+        group = group.sort_values(
+            "year"
+        ).copy()
+
+        if group.empty:
+            continue
+
+        latest = group.iloc[-1]
+
+        latest_year = int(
+            latest["year"]
+        )
+
+        latest_cfo = safe_float(
+            latest["operating_activity"]
+        )
+
+        latest_cff = safe_float(
+            latest["financing_activity"]
+        )
+
+        company_rows = group.to_dict(
+            "records"
+        )
+
+        cfo_quality_score = calculate_cfo_quality_score(
+            company_rows,
+            latest_year
+        )
+
+        cfo_quality_label = classify_cfo_quality(
+            cfo_quality_score
+        )
+
+        capex_intensity_pct = calculate_capex_intensity(
+            latest["investing_activity"],
+            latest["sales"]
+        )
+
+        capex_label = classify_capex_intensity(
+            capex_intensity_pct
+        )
+
+        fcf_cagr_5yr = calculate_fcf_cagr_5yr(
+            company_rows,
+            latest_year
+        )
+
+        latest_fcf = calculate_free_cash_flow(
+            latest["operating_activity"],
+            latest["investing_activity"]
+        )
+
+        fcf_conversion_pct = calculate_fcf_conversion_rate(
+            latest_fcf,
+            latest["operating_profit"]
+        )
+
+        distress_flag = (
+            latest_cfo is not None
+            and latest_cff is not None
+            and latest_cfo < 0
+            and latest_cff > 0
+        )
+
+        deleveraging_flag = False
+
+        latest_borrowings = safe_float(
+            latest["borrowings"]
+        )
+
+        previous_rows = group[
+            group["year"] < latest_year
+        ]
+
+        if not previous_rows.empty:
+
+            previous = previous_rows.iloc[-1]
+
+            previous_borrowings = safe_float(
+                previous["borrowings"]
+            )
+
+            if (
+                latest_cff is not None
+                and latest_cff < 0
+                and latest_borrowings is not None
+                and previous_borrowings is not None
+                and latest_borrowings < previous_borrowings
+            ):
+                deleveraging_flag = True
+
+        capital_allocation_label = classify_capital_allocation(
+            latest["operating_activity"],
+            latest["investing_activity"],
+            latest["financing_activity"],
+            cfo_quality_score
+        )
+
+        sector = latest["sector"]
+
+        if pd.isna(sector):
+            sector = None
+
+        output_rows.append({
+            "company_id": str(company_id),
+            "sector": sector,
+            "cfo_quality_score": cfo_quality_score,
+            "cfo_quality_label": cfo_quality_label,
+            "capex_intensity_pct": capex_intensity_pct,
+            "capex_label": capex_label,
+            "fcf_cagr_5yr": fcf_cagr_5yr,
+            "fcf_conversion_pct": fcf_conversion_pct,
+            "distress_flag": bool(distress_flag),
+            "deleveraging_flag": bool(deleveraging_flag),
+            "capital_allocation_label": capital_allocation_label,
+        })
+
+    return pd.DataFrame(
+        output_rows,
+        columns=[
+            "company_id",
+            "sector",
+            "cfo_quality_score",
+            "cfo_quality_label",
+            "capex_intensity_pct",
+            "capex_label",
+            "fcf_cagr_5yr",
+            "fcf_conversion_pct",
+            "distress_flag",
+            "deleveraging_flag",
+            "capital_allocation_label",
+        ]
+    )
+
 
 def generate_capital_allocation_csv(df):
-
     os.makedirs(
         "output",
         exist_ok=True
@@ -588,23 +710,244 @@ def generate_capital_allocation_csv(df):
     ].copy()
 
     output_df.to_csv(
-        OUTPUT_PATH,
+        CAPITAL_ALLOCATION_OUTPUT,
         index=False
     )
 
     return output_df
 
 
-# 14. MAIN
+def generate_cashflow_intelligence_xlsx(
+    intelligence_df
+):
+    os.makedirs(
+        "output",
+        exist_ok=True
+    )
+
+    intelligence_df.to_excel(
+        INTELLIGENCE_OUTPUT,
+        index=False
+    )
+
+    return intelligence_df
+
+
+def generate_distress_alerts(df):
+    os.makedirs(
+        "output",
+        exist_ok=True
+    )
+
+    distress_rows = []
+
+    for company_id, group in df.groupby(
+        "company_id",
+        sort=False
+    ):
+        group = group.sort_values(
+            "year"
+        )
+
+        if group.empty:
+            continue
+
+        latest = group.iloc[-1]
+
+        cfo = safe_float(
+            latest["operating_activity"]
+        )
+
+        cff = safe_float(
+            latest["financing_activity"]
+        )
+
+        latest_net_profit = safe_float(
+            latest["net_profit"]
+        )
+
+        if (
+            cfo is not None
+            and cff is not None
+            and cfo < 0
+            and cff > 0
+        ):
+            distress_rows.append({
+                "company_id": str(company_id),
+                "cfo": cfo,
+                "cff": cff,
+                "latest_net_profit": latest_net_profit,
+            })
+
+    distress_df = pd.DataFrame(
+        distress_rows,
+        columns=[
+            "company_id",
+            "cfo",
+            "cff",
+            "latest_net_profit",
+        ]
+    )
+
+    distress_df.to_csv(
+        DISTRESS_OUTPUT,
+        index=False
+    )
+
+    return distress_df
+
+
+def verify_outputs(
+    df,
+    intelligence_df,
+    distress_df
+):
+    expected_intelligence_columns = [
+        "company_id",
+        "sector",
+        "cfo_quality_score",
+        "cfo_quality_label",
+        "capex_intensity_pct",
+        "capex_label",
+        "fcf_cagr_5yr",
+        "fcf_conversion_pct",
+        "distress_flag",
+        "deleveraging_flag",
+        "capital_allocation_label",
+    ]
+
+    expected_distress_columns = [
+        "company_id",
+        "cfo",
+        "cff",
+        "latest_net_profit",
+    ]
+
+    intelligence_columns_valid = (
+        list(intelligence_df.columns)
+        == expected_intelligence_columns
+    )
+
+    distress_columns_valid = (
+        list(distress_df.columns)
+        == expected_distress_columns
+    )
+
+    company_count = df[
+        "company_id"
+    ].nunique()
+
+    intelligence_company_count = intelligence_df[
+        "company_id"
+    ].nunique()
+
+    distress_flags = intelligence_df[
+        "distress_flag"
+    ].fillna(False).astype(bool)
+
+    distress_output_count = len(
+        distress_df
+    )
+
+    distress_flag_count = int(
+        distress_flags.sum()
+    )
+
+    distress_counts_match = (
+        distress_output_count
+        == distress_flag_count
+    )
+
+    capital_allocation_labels_valid = (
+        intelligence_df[
+            "capital_allocation_label"
+        ].notna().all()
+    )
+
+    print()
+    print("Day 31 verification:")
+    print(
+        "Companies in source:",
+        company_count
+    )
+    print(
+        "Companies in intelligence output:",
+        intelligence_company_count
+    )
+    print(
+        "Intelligence columns valid:",
+        intelligence_columns_valid
+    )
+    print(
+        "Distress columns valid:",
+        distress_columns_valid
+    )
+    print(
+        "Distress flags:",
+        distress_flag_count
+    )
+    print(
+        "Distress alert rows:",
+        distress_output_count
+    )
+    print(
+        "Distress counts match:",
+        distress_counts_match
+    )
+    print(
+        "Capital allocation labels valid:",
+        capital_allocation_labels_valid
+    )
+
+    verification_passed = (
+        company_count > 0
+        and intelligence_company_count == company_count
+        and intelligence_columns_valid
+        and distress_columns_valid
+        and distress_counts_match
+        and capital_allocation_labels_valid
+        and os.path.exists(
+            INTELLIGENCE_OUTPUT
+        )
+        and os.path.exists(
+            DISTRESS_OUTPUT
+        )
+        and os.path.exists(
+            CAPITAL_ALLOCATION_OUTPUT
+        )
+    )
+
+    if verification_passed:
+        print()
+        print(
+            "VERIFICATION PASSED: Day 31 Cash Flow Intelligence "
+            "outputs generated successfully."
+        )
+    else:
+        print()
+        print(
+            "VERIFICATION FAILED: one or more Day 31 requirements "
+            "were not satisfied."
+        )
+
+        raise SystemExit(1)
+
 
 def main():
 
-    print("DAY 11 - CASH FLOW KPIs & CAPITAL ALLOCATION")
+    print(
+        "DAY 31 - CASH FLOW INTELLIGENCE MODULE"
+    )
 
     if not os.path.exists(DB_PATH):
         raise FileNotFoundError(
             f"Database not found: {DB_PATH}"
         )
+
+    os.makedirs(
+        "output",
+        exist_ok=True
+    )
 
     connection = sqlite3.connect(
         DB_PATH
@@ -612,7 +955,9 @@ def main():
 
     try:
 
-        print("\nLoading annual March data...")
+        print(
+            "\nLoading annual March cash flow data..."
+        )
 
         df = load_data(
             connection
@@ -633,40 +978,156 @@ def main():
             df["year"].nunique()
         )
 
-        print("\nCalculating Day 11 KPIs...")
+        if df.empty:
+            raise ValueError(
+                "No annual March cash flow data was found."
+            )
+
+        print(
+            "\nCalculating cash flow KPIs..."
+        )
 
         result = calculate_kpis(
             df
         )
 
-        print("\nGenerating capital allocation CSV...")
+        print(
+            "\nGenerating capital allocation CSV..."
+        )
 
-        output_df = generate_capital_allocation_csv(
-            result
+        capital_allocation_df = (
+            generate_capital_allocation_csv(
+                result
+            )
         )
 
         print(
-            "\nCreated:",
-            OUTPUT_PATH
+            "Created:",
+            CAPITAL_ALLOCATION_OUTPUT
         )
 
         print(
             "Rows:",
-            len(output_df)
+            len(capital_allocation_df)
         )
-
-        print("\nPattern summary:")
 
         print(
-            output_df[
-                "pattern_label"
-            ].value_counts().to_string()
+            "\nGenerating company-level cash flow intelligence..."
         )
 
-        print("\nDay 11 completed successfully.")
+        intelligence_df = (
+            build_cashflow_intelligence(
+                result
+            )
+        )
+
+        print(
+            "\nGenerating cashflow intelligence Excel..."
+        )
+
+        generate_cashflow_intelligence_xlsx(
+            intelligence_df
+        )
+
+        print(
+            "Created:",
+            INTELLIGENCE_OUTPUT
+        )
+
+        print(
+            "\nGenerating distress alerts..."
+        )
+
+        distress_df = generate_distress_alerts(
+            result
+        )
+
+        print(
+            "Created:",
+            DISTRESS_OUTPUT
+        )
+
+        print(
+            "Distress companies:",
+            len(distress_df)
+        )
+
+        print(
+            "\nCapital allocation pattern summary:"
+        )
+
+        print(
+            intelligence_df[
+                "capital_allocation_label"
+            ]
+            .value_counts()
+            .to_string()
+        )
+
+        print(
+            "\nCFO Quality summary:"
+        )
+
+        print(
+            intelligence_df[
+                "cfo_quality_label"
+            ]
+            .value_counts(
+                dropna=False
+            )
+            .to_string()
+        )
+
+        print(
+            "\nCapEx intensity summary:"
+        )
+
+        print(
+            intelligence_df[
+                "capex_label"
+            ]
+            .value_counts(
+                dropna=False
+            )
+            .to_string()
+        )
+
+        print(
+            "\nDistress signal companies:",
+            int(
+                intelligence_df[
+                    "distress_flag"
+                ]
+                .fillna(False)
+                .astype(bool)
+                .sum()
+            )
+        )
+
+        print(
+            "Deleveraging companies:",
+            int(
+                intelligence_df[
+                    "deleveraging_flag"
+                ]
+                .fillna(False)
+                .astype(bool)
+                .sum()
+            )
+        )
+
+        verify_outputs(
+            result,
+            intelligence_df,
+            distress_df
+        )
+
+        print()
+        print(
+            "Day 31 Cash Flow Intelligence completed successfully."
+        )
 
     finally:
-
         connection.close()
 
 
