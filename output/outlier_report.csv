@@ -1,0 +1,14 @@
+company_id,company_name,broad_sector,metric,value,z_score
+BAJAJHLDNG,Bajaj Holdings & Investment Ltd,Financials,net_profit_margin_pct,432.7262044653349,4.497813911494211
+INDIGO,Interglobe Aviation Ltd,Consumer Discretionary,return_on_equity_pct,892.568306010929,3.471902785993034
+PNB,Punjab National Bank,Financials,return_on_equity_pct,61.320565191187306,3.2495226363195013
+ADANIGREEN,Adani Green Energy Ltd,Energy,debt_to_equity,6.595281675818589,3.1428777700392247
+BAJAJHLDNG,Bajaj Holdings & Investment Ltd,Financials,interest_coverage,3764.5,3.58874950243471
+INDIGO,Interglobe Aviation Ltd,Consumer Discretionary,asset_turnover,56.38625204582652,3.4725940517670426
+PNB,Punjab National Bank,Financials,asset_turnover,1.5070262950629396,4.233577435077389
+TATAMOTORS,Tata Motors Ltd,Consumer Discretionary,free_cash_flow_cr,45133.0,3.22891444411325
+ICICIBANK,ICICI Bank Ltd,Financials,capex_cr,-144737.0,-4.355463791886146
+BAJAJHLDNG,Bajaj Holdings & Investment Ltd,Financials,earnings_per_share,653.0,4.2600192704359126
+BAJAJHLDNG,Bajaj Holdings & Investment Ltd,Financials,book_value_per_share,4887.117117117117,4.2964210035998835
+RELIANCE,"Reliance Industries Ltd
+",Energy,book_value_per_share,1172.747561336092,3.3197116782136966
