@@ -1,0 +1,363 @@
+import sqlite3
+from pathlib import Path
+
+from fastapi import APIRouter, Query
+
+router = APIRouter()
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+DB_PATH = BASE_DIR / "data" / "nifty100.db"
+
+
+@router.get("/companies")
+def get_companies(
+    sector: str | None = Query(default=None),
+    market_cap_category: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    query = """
+        SELECT
+            c.id,
+            c.company_name,
+            s.broad_sector,
+            s.sub_sector,
+            c.roe_percentage AS roe_pct,
+            c.roce_percentage AS roce_pct
+        FROM companies c
+        INNER JOIN sectors s
+            ON s.company_id = c.id
+        WHERE 1 = 1
+    """
+
+    params = []
+
+    if sector:
+        query += " AND s.broad_sector = ?"
+        params.append(sector)
+
+    if market_cap_category:
+        query += " AND s.market_cap_category = ?"
+        params.append(market_cap_category)
+
+    if search:
+        query += """
+            AND (
+                c.company_name LIKE ?
+                OR c.id LIKE ?
+            )
+        """
+
+        search_value = f"%{search}%"
+        params.extend([search_value, search_value])
+
+    query += " ORDER BY c.id"
+
+    rows = conn.execute(query, params).fetchall()
+
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+
+@router.get("/companies/{ticker}")
+def get_company_profile(ticker: str):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    query = """
+        SELECT
+            c.*,
+            s.broad_sector,
+            s.sub_sector,
+            s.index_weight_pct,
+            s.market_cap_category,
+            r.year AS latest_year,
+            r.net_profit_margin_pct,
+            r.operating_profit_margin_pct,
+            r.return_on_equity_pct,
+            r.debt_to_equity,
+            r.interest_coverage,
+            r.asset_turnover,
+            r.free_cash_flow_cr,
+            r.capex_cr,
+            r.earnings_per_share,
+            r.book_value_per_share,
+            r.dividend_payout_ratio_pct,
+            r.total_debt_cr,
+            r.cash_from_operations_cr,
+            r.revenue_cagr_5yr,
+            r.pat_cagr_5yr,
+            r.eps_cagr_5yr,
+            r.composite_quality_score
+        FROM companies c
+        LEFT JOIN sectors s
+            ON s.company_id = c.id
+        LEFT JOIN financial_ratios r
+            ON r.company_id = c.id
+            AND r.year = (
+                SELECT MAX(year)
+                FROM financial_ratios
+                WHERE company_id = c.id
+            )
+        WHERE UPPER(c.id) = UPPER(?)
+    """
+
+    row = conn.execute(query, (ticker,)).fetchone()
+
+    conn.close()
+
+    if row is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=404,
+            detail="Company not found",
+        )
+
+    return dict(row)        
+
+@router.get("/companies/{ticker}/pl")
+def get_company_pl(
+    ticker: str,
+    from_year: str | None = Query(default=None),
+    to_year: str | None = Query(default=None),
+):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    query = """
+        SELECT
+            p.year,
+            p.period,
+            p.sales,
+            p.expenses,
+            p.operating_profit,
+            p.opm_percentage,
+            p.other_income,
+            p.interest,
+            p.depreciation,
+            p.profit_before_tax,
+            p.tax_percentage,
+            p.net_profit,
+            p.eps,
+            p.dividend_payout
+        FROM profitandloss p
+        INNER JOIN companies c
+            ON c.id = p.company_id
+        WHERE UPPER(c.id) = UPPER(?)
+    """
+
+    params = [ticker]
+
+    if from_year:
+        start_year = int(from_year[:4])
+        query += " AND p.year >= ?"
+        params.append(start_year)
+
+    if to_year:
+        end_year = int(to_year[:4])
+        query += " AND p.year <= ?"
+        params.append(end_year)
+
+    query += " ORDER BY p.year"
+
+    rows = conn.execute(query, params).fetchall()
+
+    conn.close()
+
+    if not rows:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=404,
+            detail="Company or P&L data not found",
+        )
+
+    return [dict(row) for row in rows]
+
+@router.get("/companies/{ticker}/bs")
+def get_company_bs(
+    ticker: str,
+    from_year: str | None = Query(default=None),
+    to_year: str | None = Query(default=None),
+):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    query = """
+        SELECT
+            b.year,
+            b.period,
+            b.equity_capital,
+            b.reserves,
+            b.borrowings,
+            b.other_liabilities,
+            b.total_liabilities,
+            b.fixed_assets,
+            b.cwip,
+            b.investments,
+            b.other_asset,
+            b.total_assets
+        FROM balancesheet b
+        INNER JOIN companies c
+            ON c.id = b.company_id
+        WHERE UPPER(c.id) = UPPER(?)
+    """
+
+    params = [ticker]
+
+    if from_year:
+        start_year = int(from_year[:4])
+        query += " AND b.year >= ?"
+        params.append(start_year)
+
+    if to_year:
+        end_year = int(to_year[:4])
+        query += " AND b.year <= ?"
+        params.append(end_year)
+
+    query += " ORDER BY b.year"
+
+    rows = conn.execute(query, params).fetchall()
+
+    conn.close()
+
+    if not rows:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=404,
+            detail="Company or balance sheet data not found",
+        )
+
+    return [dict(row) for row in rows]
+
+@router.get("/companies/{ticker}/cashflow")
+def get_company_cashflow(
+    ticker: str,
+    from_year: str | None = Query(default=None),
+    to_year: str | None = Query(default=None),
+):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    query = """
+        SELECT
+            cf.year,
+            cf.period,
+            cf.operating_activity,
+            cf.investing_activity,
+            cf.financing_activity,
+            cf.net_cash_flow
+        FROM cashflow cf
+        INNER JOIN companies c
+            ON c.id = cf.company_id
+        WHERE UPPER(c.id) = UPPER(?)
+    """
+
+    params = [ticker]
+
+    if from_year:
+        start_year = int(from_year[:4])
+        query += " AND cf.year >= ?"
+        params.append(start_year)
+
+    if to_year:
+        end_year = int(to_year[:4])
+        query += " AND cf.year <= ?"
+        params.append(end_year)
+
+    query += " ORDER BY cf.year"
+
+    rows = conn.execute(query, params).fetchall()
+
+    conn.close()
+
+    if not rows:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=404,
+            detail="Company or cash flow data not found",
+        )
+
+    return [dict(row) for row in rows]
+
+@router.get("/companies/{ticker}/ratios")
+def get_company_ratios(
+    ticker: str,
+    year: int | None = Query(default=None),
+):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    query = """
+        SELECT
+            r.year,
+            r.period,
+            r.net_profit_margin_pct,
+            r.operating_profit_margin_pct,
+            r.return_on_equity_pct,
+            r.debt_to_equity,
+            r.interest_coverage,
+            r.asset_turnover,
+            r.free_cash_flow_cr,
+            r.capex_cr,
+            r.earnings_per_share,
+            r.book_value_per_share,
+            r.dividend_payout_ratio_pct,
+            r.total_debt_cr,
+            r.cash_from_operations_cr,
+            r.revenue_cagr_5yr,
+            r.pat_cagr_5yr,
+            r.eps_cagr_5yr,
+            r.composite_quality_score
+        FROM financial_ratios r
+        INNER JOIN companies c
+            ON c.id = r.company_id
+        WHERE UPPER(c.id) = UPPER(?)
+    """
+
+    params = [ticker]
+
+    if year is not None:
+        query += " AND r.year = ?"
+        params.append(year)
+
+    query += " ORDER BY r.year"
+
+    rows = conn.execute(query, params).fetchall()
+
+    conn.close()
+
+    if not rows:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=404,
+            detail="Company or ratio data not found",
+        )
+
+    return [dict(row) for row in rows]
+
+@router.get("/companies/{ticker}/tearsheet")
+def get_company_tearsheet(ticker: str):
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+
+    pdf_path = BASE_DIR / "reports" / "tearsheets" / f"{ticker.upper()}_tearsheet.pdf"
+
+    if not pdf_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Tearsheet not found",
+        )
+
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=pdf_path.name,
+    )
