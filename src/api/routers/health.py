@@ -24,7 +24,6 @@ TABLES = [
 
 VERSION = "1.0.0"
 
-
 @router.get("/health")
 def health_check(request: Request):
     conn = sqlite3.connect(DB_PATH)

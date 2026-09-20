@@ -9,7 +9,6 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parents[3]
 DB_PATH = BASE_DIR / "data" / "nifty100.db"
 
-
 def is_valid_url(url):
     if not url:
         return False
@@ -61,3 +60,5 @@ def get_company_documents(ticker: str):
         )
 
     return documents    
+
+
