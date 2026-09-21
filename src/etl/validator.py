@@ -11,7 +11,7 @@ except ImportError:
     from normaliser import normalize_column_name, normalize_year
 
 
-FAILURE_FILE = "validation_failures.csv"
+FAILURE_FILE = "output/validation_failures.csv"
 
 EXPECTED_COLUMNS = {
     "analysis": [
@@ -157,6 +157,7 @@ def add_failure(
     record_id=None,
     company_id=None,
     year=None,
+    field=None,
 ):
     """Add failure."""
     failures.append(
@@ -168,6 +169,8 @@ def add_failure(
             "record_id": record_id,
             "company_id": company_id,
             "year": year,
+            "field": field,
+            "issue": message,
             "message": message,
         }
     )
@@ -320,6 +323,7 @@ def check_required_columns(name, df):
             name,
             1,
             f"Required column is missing: {column}",
+            field=column,
         )
 
 
@@ -338,6 +342,7 @@ def dq02_primary_key_null(name, df):
                 "Primary key id is NULL.",
                 company_id=value(row, "company_id"),
                 year=value(row, "year"),
+                field="id",
             )
 
 
@@ -358,6 +363,7 @@ def dq03_primary_key_duplicate(name, df):
             record_id=row["id"],
             company_id=value(row, "company_id"),
             year=value(row, "year"),
+            field="id",
         )
 
 
@@ -376,6 +382,7 @@ def dq04_company_id_null(name, df):
                 "company_id is NULL.",
                 record_id=value(row, "id"),
                 year=value(row, "year"),
+                field="company_id",
             )
 
 
@@ -411,6 +418,7 @@ def dq05_invalid_company_fk(all_data):
                     record_id=value(row, "id"),
                     company_id=company_id,
                     year=value(row, "year"),
+                    field="company_id",
                 )
 
 
@@ -431,6 +439,7 @@ def dq06_invalid_year(name, df):
                 "Year/reporting period is NULL.",
                 record_id=value(row, "id"),
                 company_id=value(row, "company_id"),
+                field="year",
             )
             continue
 
@@ -444,6 +453,7 @@ def dq06_invalid_year(name, df):
                 record_id=value(row, "id"),
                 company_id=value(row, "company_id"),
                 year=raw_year,
+                field="year",
             )
 
 
@@ -474,6 +484,7 @@ def dq07_duplicate_company_year(name, df):
             record_id=value(row, "id"),
             company_id=row["company_id"],
             year=row["_normalized_period"],
+            field="company_id,year",
         )
 
 
@@ -571,6 +582,7 @@ def dq08_numeric_values(name, df):
                 record_id=value(row, "id"),
                 company_id=value(row, "company_id"),
                 year=value(row, "year"),
+                field=column,
             )
 
 
@@ -682,6 +694,7 @@ def dq15_stock_price_check(name, df):
                 record_id=value(row, "id"),
                 company_id=value(row, "company_id"),
                 year=value(row, "date"),
+                field="stock_price",
             )
 
 
@@ -732,10 +745,12 @@ def dq16_ratio_sanity(name, df):
                     "CRITICAL",
                     name,
                     index + 2,
-                    f"{column} contains a non-finite numeric value: " f"{raw_value}",
+                    f"{column} contains a non-finite numeric value: "
+                    f"{raw_value}",
                     record_id=value(row, "id"),
                     company_id=value(row, "company_id"),
                     year=value(row, "year"),
+                    field=column,
                 )
 
 
@@ -783,6 +798,8 @@ def save_failures():
         "record_id",
         "company_id",
         "year",
+        "field",
+        "issue",
         "message",
     ]
 

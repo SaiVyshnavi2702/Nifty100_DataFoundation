@@ -7,16 +7,20 @@ ratios:
 	python src/etl/financial_ratios.py
 
 test:
-	python -m pytest tests/etl -v
+	python -m pytest -v --html=reports/pytest_report.html --self-contained-html
 
 report:
-	python src/etl/validator.py
+	python -m src.reports.batch_reports
+	python -m src.reports.sector_reports
+	python -m src.reports.portfolio_summary
 
 dashboard:
-	@echo Dashboard preparation completed.
+	python -m streamlit run src/dashboard/app.py --server.port 8501
 
 api:
-	@echo API service target reserved for later sprint work.
+	python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 
 clean:
-	@echo Cleaning generated output files...
+	Get-ChildItem -Recurse -Force -Filter *.pyc | Remove-Item -Force
+	Get-ChildItem -Recurse -Force -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+	Remove-Item -Force -ErrorAction SilentlyContinue .pytest_cache

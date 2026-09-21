@@ -1,0 +1,2 @@
+company_id,metric_type,period_years,parsed_value_pct,calculated_value_pct,divergence_pct,status
+INFY,compounded_sales_growth,3,5.0,15.216500798806365,10.216500798806365,MANUAL_REVIEW

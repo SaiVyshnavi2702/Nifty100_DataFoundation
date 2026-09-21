@@ -1,0 +1,26 @@
+cluster_id,cluster_name,company_count,metric,mean,median
+0,Diversified Core Companies,61,return_on_equity_pct,21.867668844397254,16.940398136885513
+0,Diversified Core Companies,61,debt_to_equity,0.593052898040604,0.2557548817272583
+0,Diversified Core Companies,61,revenue_cagr_5yr,11.37883788974708,10.78116321985565
+0,Diversified Core Companies,61,fcf_cagr_5yr,8.940477044885524,11.573154797773345
+0,Diversified Core Companies,61,operating_profit_margin_pct,20.07780637741545,19.324479554243172
+1,Growth & High-Margin Leaders,13,return_on_equity_pct,83.4368410292296,15.3548827162833
+1,Growth & High-Margin Leaders,13,debt_to_equity,0.5559862987198617,0.06477567162143734
+1,Growth & High-Margin Leaders,13,revenue_cagr_5yr,14.176048564931977,13.215722383303973
+1,Growth & High-Margin Leaders,13,fcf_cagr_5yr,19.383302289615095,19.734652020172526
+1,Growth & High-Margin Leaders,13,operating_profit_margin_pct,83.66516196258702,86.14676228532112
+2,Leveraged Financials,15,return_on_equity_pct,20.392370908841144,16.716051794688113
+2,Leveraged Financials,15,debt_to_equity,7.231779939413121,6.808786667718385
+2,Leveraged Financials,15,revenue_cagr_5yr,19.01866920235636,18.17561078322378
+2,Leveraged Financials,15,fcf_cagr_5yr,-6.349164667486179,-6.349164667486179
+2,Leveraged Financials,15,operating_profit_margin_pct,51.142645349328845,38.02180182245178
+3,High-Margin Defensive,1,return_on_equity_pct,15.554557028383135,15.554557028383135
+3,High-Margin Defensive,1,debt_to_equity,0.020931625851868495,0.020931625851868495
+3,High-Margin Defensive,1,revenue_cagr_5yr,9.513860126378049,9.513860126378049
+3,High-Margin Defensive,1,fcf_cagr_5yr,228.75036590344516,228.75036590344516
+3,High-Margin Defensive,1,operating_profit_margin_pct,75.59168153953597,75.59168153953597
+4,Strategic Industrials,2,return_on_equity_pct,4280.315266810242,4280.315266810242
+4,Strategic Industrials,2,debt_to_equity,0.5649976070830343,0.5649976070830343
+4,Strategic Industrials,2,revenue_cagr_5yr,9.731677461059828,9.731677461059828
+4,Strategic Industrials,2,fcf_cagr_5yr,,
+4,Strategic Industrials,2,operating_profit_margin_pct,28.50509624083592,28.50509624083592
