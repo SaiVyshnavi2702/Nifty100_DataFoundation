@@ -358,7 +358,7 @@ def build_sector_summary(df, styles):
     metrics = [
         ("Sales Growth", "sales_growth", "%"),
         ("Profit Growth", "profit_growth", "%"),
-        ("Stock CAGR", "stock_cagr", "%"),
+        ("Stock CAGR (SIMULATED)", "stock_cagr", "%"),
         ("ROE", "analysis_roe", "%"),
         ("Net Profit Margin", "net_profit_margin", "%"),
         ("Operating Margin", "operating_margin", "%"),

@@ -135,9 +135,8 @@ sector_df["ROE"] = pd.to_numeric(sector_df["ROE"], errors="coerce")
 sector_df["Market Cap"] = pd.to_numeric(sector_df["Market Cap"], errors="coerce")
 
 
-# ---------------------------------------------------------
+
 # Company Bubble Chart
-# ---------------------------------------------------------
 
 st.subheader(f"{selected_sector} Company Comparison")
 
@@ -202,9 +201,7 @@ else:
     )
 
 
-# ---------------------------------------------------------
 # Sector Median KPI Bar Charts
-# ---------------------------------------------------------
 
 st.subheader(f"{selected_sector} Median KPIs")
 
@@ -347,7 +344,7 @@ with median_col3:
         )
 
         market_cap_fig.update_layout(
-            title="Median Market Cap",
+            title="Median Market Cap (SIMULATED)",
             template="plotly_white",
             height=350,
             showlegend=False,
@@ -367,9 +364,8 @@ with median_col3:
         )
 
 
-# ---------------------------------------------------------
+
 # Companies Table
-# ---------------------------------------------------------
 
 st.subheader("Companies in Selected Sector")
 
