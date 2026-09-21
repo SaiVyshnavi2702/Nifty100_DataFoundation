@@ -1,10 +1,9 @@
 from src.analytics.cagr import (
-    calculate_cagr,
-    calculate_period_cagr,
     calculate_all_cagrs,
+    calculate_cagr,
     calculate_financial_cagrs,
+    calculate_period_cagr,
 )
-
 
 
 def test_normal_cagr():
@@ -133,6 +132,7 @@ def test_all_cagrs():
 
     assert "cagr_10yr" in result
     assert "cagr_10yr_flag" in result
+
 
 def test_financial_cagrs():
     revenue = {

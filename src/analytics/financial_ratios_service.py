@@ -1,10 +1,9 @@
 import sqlite3
 
-from src.analytics.ratios_service import calculate_company_ratios
 from src.analytics.cagr_service import calculate_company_cagrs
-from src.analytics.quality_score import calculate_composite_quality_score
 from src.analytics.cashflow_kpis import calculate_free_cash_flow
-
+from src.analytics.quality_score import calculate_composite_quality_score
+from src.analytics.ratios_service import calculate_company_ratios
 
 DB_PATH = "data/nifty100.db"
 
@@ -92,8 +91,7 @@ def get_annual_financial_rows(connection):
     TTM, quarterly and partial-year P&L periods are ignored.
     """
 
-    rows = connection.execute(
-        """
+    rows = connection.execute("""
         SELECT
             p.company_id,
             p.year,
@@ -150,14 +148,9 @@ def get_annual_financial_rows(connection):
         ORDER BY
             p.company_id,
             p.year
-        """
-    ).fetchall()
+        """).fetchall()
 
-    return [
-        row
-        for row in rows
-        if is_annual_period(row[2])
-    ]
+    return [row for row in rows if is_annual_period(row[2])]
 
 
 def calculate_day12_kpis(
@@ -212,56 +205,23 @@ def calculate_day12_kpis(
     )
 
     return {
-        "net_profit_margin_pct":
-            ratios.get("net_profit_margin"),
-
-        "operating_profit_margin_pct":
-            ratios.get("operating_profit_margin"),
-
-        "return_on_equity_pct":
-            ratios.get("return_on_equity"),
-
-        "debt_to_equity":
-            ratios.get("debt_to_equity"),
-
-        "interest_coverage":
-            ratios.get("interest_coverage"),
-
-        "asset_turnover":
-            ratios.get("asset_turnover"),
-
-        "free_cash_flow_cr":
-            free_cash_flow,
-
-        "capex_cr":
-            investing_activity,
-
-        "earnings_per_share":
-            eps,
-
-        "book_value_per_share":
-            book_value_per_share,
-
-        "dividend_payout_ratio_pct":
-            dividend_payout,
-
-        "total_debt_cr":
-            borrowings,
-
-        "cash_from_operations_cr":
-            operating_activity,
-
-        "revenue_cagr_5yr":
-            revenue_cagr,
-
-        "pat_cagr_5yr":
-            pat_cagr,
-
-        "eps_cagr_5yr":
-            eps_cagr,
-
-        "composite_quality_score":
-            quality_score,
+        "net_profit_margin_pct": ratios.get("net_profit_margin"),
+        "operating_profit_margin_pct": ratios.get("operating_profit_margin"),
+        "return_on_equity_pct": ratios.get("return_on_equity"),
+        "debt_to_equity": ratios.get("debt_to_equity"),
+        "interest_coverage": ratios.get("interest_coverage"),
+        "asset_turnover": ratios.get("asset_turnover"),
+        "free_cash_flow_cr": free_cash_flow,
+        "capex_cr": investing_activity,
+        "earnings_per_share": eps,
+        "book_value_per_share": book_value_per_share,
+        "dividend_payout_ratio_pct": dividend_payout,
+        "total_debt_cr": borrowings,
+        "cash_from_operations_cr": operating_activity,
+        "revenue_cagr_5yr": revenue_cagr,
+        "pat_cagr_5yr": pat_cagr,
+        "eps_cagr_5yr": eps_cagr,
+        "composite_quality_score": quality_score,
     }
 
 
@@ -372,23 +332,19 @@ def save_financial_ratio(
             company_id,
             year,
             period,
-
             kpis["net_profit_margin_pct"],
             kpis["operating_profit_margin_pct"],
             kpis["return_on_equity_pct"],
             kpis["debt_to_equity"],
             kpis["interest_coverage"],
             kpis["asset_turnover"],
-
             kpis["free_cash_flow_cr"],
             kpis["capex_cr"],
             kpis["earnings_per_share"],
             kpis["book_value_per_share"],
             kpis["dividend_payout_ratio_pct"],
-
             kpis["total_debt_cr"],
             kpis["cash_from_operations_cr"],
-
             kpis["revenue_cagr_5yr"],
             kpis["pat_cagr_5yr"],
             kpis["eps_cagr_5yr"],
@@ -420,23 +376,19 @@ def populate_financial_ratios(db_path=DB_PATH):
                 company_id,
                 year,
                 period,
-
                 sales,
                 net_profit,
                 eps,
                 dividend_payout,
-                operating_profit,
-                other_income,
-                interest,
-
+                _operating_profit,
+                _other_income,
+                _interest,
                 equity_capital,
                 reserves,
                 borrowings,
                 investments,
-                total_assets,
-
+                _total_assets,
                 face_value,
-
                 operating_activity,
                 investing_activity,
             ) = row
@@ -472,21 +424,19 @@ def populate_financial_ratios(db_path=DB_PATH):
 
         connection.commit()
 
-        final_count = connection.execute(
-            """
+        final_count = connection.execute("""
             SELECT COUNT(*)
             FROM financial_ratios
-            """
-        ).fetchone()[0]
+            """).fetchone()[0]
 
         print("Rows processed:", processed)
         print("Rows with quality score:", scored)
 
-        
         print("Final financial_ratios rows:", final_count)
 
     finally:
         connection.close()
+
 
 if __name__ == "__main__":
     populate_financial_ratios()

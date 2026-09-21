@@ -17,39 +17,20 @@ def winsorised_score(series, higher_is_better=True):
     valid_values = values.dropna()
 
     if valid_values.empty:
-        return pd.Series(
-            np.nan,
-            index=series.index,
-            dtype=float
-        )
+        return pd.Series(np.nan, index=series.index, dtype=float)
 
     p10 = valid_values.quantile(0.10)
     p90 = valid_values.quantile(0.90)
 
     if p10 == p90:
-        return pd.Series(
-            50.0,
-            index=series.index,
-            dtype=float
-        )
+        return pd.Series(50.0, index=series.index, dtype=float)
 
-    capped = values.clip(
-        lower=p10,
-        upper=p90
-    )
+    capped = values.clip(lower=p10, upper=p90)
 
     if higher_is_better:
-        return (
-            (capped - p10)
-            / (p90 - p10)
-            * 100
-        )
+        return (capped - p10) / (p90 - p10) * 100
 
-    return (
-        (p90 - capped)
-        / (p90 - p10)
-        * 100
-    )
+    return (p90 - capped) / (p90 - p10) * 100
 
 
 def calculate_cfo_pat_ratio(cfo, pat):
@@ -86,12 +67,7 @@ def calculate_fcf_cagr(current_fcf, previous_fcf, years=5):
     if current_fcf <= 0 or previous_fcf <= 0:
         return np.nan
 
-    return (
-        (
-            current_fcf / previous_fcf
-        ) ** (1 / years)
-        - 1
-    ) * 100
+    return ((current_fcf / previous_fcf) ** (1 / years) - 1) * 100
 
 
 def add_historical_fcf_cagr(df, db_path):
@@ -115,93 +91,51 @@ def add_historical_fcf_cagr(df, db_path):
             free_cash_flow_cr
         FROM financial_ratios
         """,
-        connection
+        connection,
     )
 
     connection.close()
 
-    history["year"] = pd.to_numeric(
-        history["year"],
-        errors="coerce"
-    )
+    history["year"] = pd.to_numeric(history["year"], errors="coerce")
 
     history["free_cash_flow_cr"] = pd.to_numeric(
-        history["free_cash_flow_cr"],
-        errors="coerce"
+        history["free_cash_flow_cr"], errors="coerce"
     )
 
-    history = history.dropna(
-        subset=[
-            "company_id",
-            "year"
-        ]
-    ).copy()
+    history = history.dropna(subset=["company_id", "year"]).copy()
 
     history["year"] = history["year"].astype(int)
 
-    history = (
-        history
-        .sort_values(
-            ["company_id", "year"]
-        )
-        .drop_duplicates(
-            ["company_id", "year"],
-            keep="last"
-        )
+    history = history.sort_values(["company_id", "year"]).drop_duplicates(
+        ["company_id", "year"], keep="last"
     )
 
     latest = (
-        history
-        .sort_values(
-            ["company_id", "year"]
-        )
-        .drop_duplicates(
-            "company_id",
-            keep="last"
-        )
+        history.sort_values(["company_id", "year"])
+        .drop_duplicates("company_id", keep="last")
         .copy()
     )
 
     latest["previous_year"] = latest["year"] - 5
 
     previous = history.rename(
-        columns={
-            "year": "previous_year",
-            "free_cash_flow_cr": "previous_fcf"
-        }
+        columns={"year": "previous_year", "free_cash_flow_cr": "previous_fcf"}
     )
 
     merged = latest.merge(
-        previous[
-            [
-                "company_id",
-                "previous_year",
-                "previous_fcf"
-            ]
-        ],
-        on=[
-            "company_id",
-            "previous_year"
-        ],
-        how="left"
+        previous[["company_id", "previous_year", "previous_fcf"]],
+        on=["company_id", "previous_year"],
+        how="left",
     )
 
     merged["fcf_cagr_5yr"] = merged.apply(
-        lambda row: calculate_fcf_cagr(
-            row["free_cash_flow_cr"],
-            row["previous_fcf"]
-        ),
-        axis=1
+        lambda row: calculate_fcf_cagr(row["free_cash_flow_cr"], row["previous_fcf"]),
+        axis=1,
     )
 
-    fcf_cagr = (
-        merged
-        .set_index("company_id")["fcf_cagr_5yr"]
-    )
+    fcf_cagr = merged.set_index("company_id")["fcf_cagr_5yr"]
 
-    result["fcf_cagr_5yr"] = result["company_id"].map(
-        fcf_cagr
-    )
+    result["fcf_cagr_5yr"] = result["company_id"].map(fcf_cagr)
 
     return result
 
@@ -246,13 +180,11 @@ def calculate_sector_relative_score(df, db_path=None):
         "revenue_cagr_5yr",
         "pat_cagr_5yr",
         "debt_to_equity",
-        "interest_coverage"
+        "interest_coverage",
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in result.columns
+        column for column in required_columns if column not in result.columns
     ]
 
     if missing_columns:
@@ -262,26 +194,19 @@ def calculate_sector_relative_score(df, db_path=None):
         )
 
     if db_path is not None:
-        result = add_historical_fcf_cagr(
-            result,
-            db_path
-        )
+        result = add_historical_fcf_cagr(result, db_path)
     elif "fcf_cagr_5yr" not in result.columns:
         result["fcf_cagr_5yr"] = np.nan
 
     result["cfo_pat_ratio"] = result.apply(
         lambda row: calculate_cfo_pat_ratio(
-            row["cash_from_operations_cr"],
-            row["net_profit"]
+            row["cash_from_operations_cr"], row["net_profit"]
         ),
-        axis=1
+        axis=1,
     )
 
     result["fcf_positive_flag"] = np.where(
-        result["free_cash_flow_cr"].notna()
-        & (result["free_cash_flow_cr"] > 0),
-        1,
-        0
+        result["free_cash_flow_cr"].notna() & (result["free_cash_flow_cr"] > 0), 1, 0
     )
 
     metrics = {
@@ -293,7 +218,7 @@ def calculate_sector_relative_score(df, db_path=None):
         "revenue_cagr_5yr": True,
         "pat_cagr_5yr": True,
         "debt_to_equity": False,
-        "interest_coverage": True
+        "interest_coverage": True,
     }
 
     for metric, higher_is_better in metrics.items():
@@ -301,27 +226,15 @@ def calculate_sector_relative_score(df, db_path=None):
 
         result[score_column] = np.nan
 
-        for sector, indexes in result.groupby(
-            "broad_sector",
-            dropna=False
-        ).groups.items():
+        for indexes in result.groupby("broad_sector", dropna=False).groups.values():
 
-            sector_values = result.loc[
-                indexes,
-                metric
-            ]
+            sector_values = result.loc[indexes, metric]
 
-            result.loc[
-                indexes,
-                score_column
-            ] = winsorised_score(
-                sector_values,
-                higher_is_better
+            result.loc[indexes, score_column] = winsorised_score(
+                sector_values, higher_is_better
             )
 
-    result["sector_score_fcf_positive"] = (
-        result["fcf_positive_flag"] * 100
-    )
+    result["sector_score_fcf_positive"] = result["fcf_positive_flag"] * 100
 
     result["profitability_score"] = (
         result["sector_score_return_on_equity_pct"] * 0.15
@@ -353,15 +266,11 @@ def calculate_sector_relative_score(df, db_path=None):
     )
 
     result["composite_quality_score"] = (
-        result["composite_quality_score"]
-        .clip(0, 100)
-        .round(2)
+        result["composite_quality_score"].clip(0, 100).round(2)
     )
 
     result = result.sort_values(
-        by="composite_quality_score",
-        ascending=False,
-        na_position="last"
+        by="composite_quality_score", ascending=False, na_position="last"
     ).reset_index(drop=True)
 
     return result

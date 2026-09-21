@@ -1,540 +1,1 @@
-import os
-import sqlite3
-
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-
-
-DB_PATH = "data/nifty100.db"
-
-CLUSTER_LABELS_FILE = "output/cluster_labels.csv"
-CLUSTER_PROFILE_FILE = "output/cluster_profile.csv"
-CORRELATION_FILE = "reports/correlation_heatmap.png"
-OUTLIER_FILE = "output/outlier_report.csv"
-PORTFOLIO_STATS_FILE = "output/portfolio_stats.csv"
-
-
-# KPIs used for the Day 37 analysis
-KPIS = [
-    "net_profit_margin_pct",
-    "operating_profit_margin_pct",
-    "return_on_equity_pct",
-    "debt_to_equity",
-    "interest_coverage",
-    "asset_turnover",
-    "free_cash_flow_cr",
-    "capex_cr",
-    "earnings_per_share",
-    "book_value_per_share",
-]
-
-
-# Names based on the financial characteristics of each cluster
-CLUSTER_NAMES = {
-    0: "Diversified Core Companies",
-    1: "Growth & High-Margin Leaders",
-    2: "Leveraged Financials",
-    3: "High-Margin Defensive",
-    4: "Strategic Industrials",
-}
-
-
-def get_data():
-    conn = sqlite3.connect(DB_PATH)
-
-    ratios = pd.read_sql_query(
-        """
-        SELECT
-            company_id,
-            year,
-            net_profit_margin_pct,
-            operating_profit_margin_pct,
-            return_on_equity_pct,
-            debt_to_equity,
-            interest_coverage,
-            asset_turnover,
-            free_cash_flow_cr,
-            capex_cr,
-            earnings_per_share,
-            book_value_per_share,
-            revenue_cagr_5yr
-        FROM financial_ratios
-        """,
-        conn,
-    )
-
-    companies = pd.read_sql_query(
-        """
-        SELECT
-            id AS company_id,
-            company_name
-        FROM companies
-        """,
-        conn,
-    )
-
-    # The sectors table is the project's official 92-company universe.
-    sectors = pd.read_sql_query(
-        """
-        SELECT
-            company_id,
-            broad_sector
-        FROM sectors
-        """,
-        conn,
-    )
-
-    cashflow = pd.read_sql_query(
-        """
-        SELECT
-            company_id,
-            year,
-            operating_activity,
-            investing_activity
-        FROM cashflow
-        """,
-        conn,
-    )
-
-    conn.close()
-
-    return ratios, companies, sectors, cashflow
-
-
-def get_latest_data(ratios):
-    ratios = ratios.sort_values(
-        ["company_id", "year"]
-    )
-
-    # Keep the latest annual record for each company.
-    latest = ratios.groupby(
-        "company_id"
-    ).tail(1).copy()
-
-    return latest
-
-
-def calculate_fcf_cagr(cashflow):
-    cashflow = cashflow.copy()
-
-    cashflow["operating_activity"] = pd.to_numeric(
-        cashflow["operating_activity"],
-        errors="coerce",
-    ).fillna(0)
-
-    cashflow["investing_activity"] = pd.to_numeric(
-        cashflow["investing_activity"],
-        errors="coerce",
-    ).fillna(0)
-
-    # Free Cash Flow = Operating Cash Flow + Investing Cash Flow
-    cashflow["free_cash_flow"] = (
-        cashflow["operating_activity"]
-        + cashflow["investing_activity"]
-    )
-
-    cashflow = cashflow.sort_values(
-        ["company_id", "year"]
-    )
-
-    rows = []
-
-    for company_id, group in cashflow.groupby(
-        "company_id"
-    ):
-        if len(group) < 6:
-            continue
-
-        current = group.iloc[-1]["free_cash_flow"]
-        previous = group.iloc[-6]["free_cash_flow"]
-
-        # CAGR cannot be calculated from zero or negative values.
-        if current <= 0 or previous <= 0:
-            continue
-
-        cagr = (
-            (current / previous) ** (1 / 5) - 1
-        ) * 100
-
-        rows.append(
-            {
-                "company_id": company_id,
-                "fcf_cagr_5yr": cagr,
-            }
-        )
-
-    return pd.DataFrame(rows)
-
-
-def create_cluster_profile(latest, labels):
-    data = latest.merge(
-        labels[["company_id", "cluster_id"]],
-        on="company_id",
-        how="inner",
-    )
-
-    # All 5 features used for clustering.
-    features = [
-        "return_on_equity_pct",
-        "debt_to_equity",
-        "revenue_cagr_5yr",
-        "fcf_cagr_5yr",
-        "operating_profit_margin_pct",
-    ]
-
-    rows = []
-
-    for cluster_id, group in data.groupby(
-        "cluster_id"
-    ):
-        for feature in features:
-            values = pd.to_numeric(
-                group[feature],
-                errors="coerce",
-            ).dropna()
-
-            rows.append(
-                {
-                    "cluster_id": int(cluster_id),
-                    "cluster_name": CLUSTER_NAMES.get(
-                        int(cluster_id),
-                        f"Cluster {cluster_id}",
-                    ),
-                    "company_count": len(group),
-                    "metric": feature,
-                    "mean": values.mean(),
-                    "median": values.median(),
-                }
-            )
-
-    profile = pd.DataFrame(rows)
-
-    profile.to_csv(
-        CLUSTER_PROFILE_FILE,
-        index=False,
-    )
-
-    return profile
-
-
-def update_cluster_names(labels, universe):
-    labels = labels.copy()
-
-    # Keep only the official 92-company universe.
-    labels = labels[
-        labels["company_id"].isin(
-            universe["company_id"]
-        )
-    ].copy()
-
-    labels["cluster_name"] = labels[
-        "cluster_id"
-    ].map(CLUSTER_NAMES)
-
-    labels.to_csv(
-        CLUSTER_LABELS_FILE,
-        index=False,
-    )
-
-    return labels
-
-
-def create_correlation_heatmap(latest):
-    data = latest[KPIS].apply(
-        pd.to_numeric,
-        errors="coerce",
-    )
-
-    correlation = data.corr(
-        method="pearson"
-    )
-
-    plt.figure(
-        figsize=(14, 10)
-    )
-
-    sns.heatmap(
-        correlation,
-        annot=True,
-        fmt=".2f",
-        cmap="coolwarm",
-        center=0,
-    )
-
-    plt.title(
-        "Pearson Correlation Matrix - Nifty 100 KPIs"
-    )
-
-    plt.tight_layout()
-
-    plt.savefig(
-        CORRELATION_FILE,
-        dpi=200,
-        bbox_inches="tight",
-    )
-
-    plt.close()
-
-
-def create_outlier_report(
-    latest,
-    companies,
-    sectors,
-):
-    data = latest.merge(
-        companies,
-        on="company_id",
-        how="left",
-    )
-
-    data = data.merge(
-        sectors,
-        on="company_id",
-        how="inner",
-    )
-
-    outliers = []
-
-    for metric in KPIS:
-        data[metric] = pd.to_numeric(
-            data[metric],
-            errors="coerce",
-        )
-
-        # Calculate Z-score separately within
-        # each broad sector.
-        sector_mean = data.groupby(
-            "broad_sector"
-        )[metric].transform("mean")
-
-        sector_std = data.groupby(
-            "broad_sector"
-        )[metric].transform("std")
-
-        data["z_score"] = (
-            (data[metric] - sector_mean)
-            / sector_std
-        )
-
-        flagged = data[
-            data["z_score"].abs() > 3
-        ]
-
-        for _, row in flagged.iterrows():
-            outliers.append(
-                {
-                    "company_id": row["company_id"],
-                    "company_name": row["company_name"],
-                    "broad_sector": row["broad_sector"],
-                    "metric": metric,
-                    "value": row[metric],
-                    "z_score": row["z_score"],
-                }
-            )
-
-    outlier_report = pd.DataFrame(
-        outliers
-    )
-
-    if outlier_report.empty:
-        outlier_report = pd.DataFrame(
-            columns=[
-                "company_id",
-                "company_name",
-                "broad_sector",
-                "metric",
-                "value",
-                "z_score",
-            ]
-        )
-
-    outlier_report.to_csv(
-        OUTLIER_FILE,
-        index=False,
-    )
-
-    return outlier_report
-
-
-def create_portfolio_stats(latest):
-    data = latest[KPIS].apply(
-        pd.to_numeric,
-        errors="coerce",
-    )
-
-    stats = pd.DataFrame(
-        {
-            "P10": data.quantile(0.10),
-            "P25": data.quantile(0.25),
-            "P50": data.quantile(0.50),
-            "P75": data.quantile(0.75),
-            "P90": data.quantile(0.90),
-            "Mean": data.mean(),
-            "Std": data.std(),
-        }
-    )
-
-    stats.index.name = "KPI"
-
-    stats = stats.reset_index()
-
-    stats.to_csv(
-        PORTFOLIO_STATS_FILE,
-        index=False,
-    )
-
-    return stats
-
-
-def main():
-    os.makedirs(
-        "output",
-        exist_ok=True,
-    )
-
-    os.makedirs(
-        "reports",
-        exist_ok=True,
-    )
-
-    print("Loading data...")
-
-    ratios, companies, sectors, cashflow = (
-        get_data()
-    )
-
-    print(
-        f"92-company universe: {sectors['company_id'].nunique()} companies"
-    )
-
-    print(
-        "Getting latest year data..."
-    )
-
-    latest = get_latest_data(
-        ratios
-    )
-
-    # Keep only the official 92-company universe.
-    latest = latest[
-        latest["company_id"].isin(
-            sectors["company_id"]
-        )
-    ].copy()
-
-    print(
-        f"Latest data available: {len(latest)} companies"
-    )
-
-    print(
-        "Calculating FCF CAGR..."
-    )
-
-    fcf_cagr = calculate_fcf_cagr(
-        cashflow
-    )
-
-    latest = latest.merge(
-        fcf_cagr,
-        on="company_id",
-        how="left",
-    )
-
-    print(
-        "Reading cluster labels..."
-    )
-
-    labels = pd.read_csv(
-        CLUSTER_LABELS_FILE
-    )
-
-    print(
-        "Updating cluster names..."
-    )
-
-    labels = update_cluster_names(
-        labels,
-        sectors,
-    )
-
-    print(
-        f"Cluster labels in 92-company universe: {len(labels)}"
-    )
-
-    print(
-        "Creating cluster profiles..."
-    )
-
-    profile = create_cluster_profile(
-        latest,
-        labels,
-    )
-
-    print(
-        "Creating correlation heatmap..."
-    )
-
-    create_correlation_heatmap(
-        latest
-    )
-
-    print(
-        "Detecting sector-wise outliers..."
-    )
-
-    outliers = create_outlier_report(
-        latest,
-        companies,
-        sectors,
-    )
-
-    print(
-        "Creating portfolio statistics..."
-    )
-
-    stats = create_portfolio_stats(
-        latest
-    )
-
-    print(
-        "\nDay 37 completed successfully."
-    )
-
-    print(
-        "\nCluster profile:"
-    )
-
-    print(
-        profile.round(2).to_string(
-            index=False
-        )
-    )
-
-    print(
-        f"\nOutliers found: {len(outliers)}"
-    )
-
-    print(
-        "\nFiles created:"
-    )
-
-    print(
-        CLUSTER_PROFILE_FILE
-    )
-
-    print(
-        CORRELATION_FILE
-    )
-
-    print(
-        OUTLIER_FILE
-    )
-
-    print(
-        PORTFOLIO_STATS_FILE
-    )
-
-
-if __name__ == "__main__":
-    main()
+import osimport sqlite3import matplotlib.pyplot as pltimport pandas as pdimport seaborn as snsDB_PATH = "data/nifty100.db"CLUSTER_LABELS_FILE = "output/cluster_labels.csv"CLUSTER_PROFILE_FILE = "output/cluster_profile.csv"CORRELATION_FILE = "reports/correlation_heatmap.png"OUTLIER_FILE = "output/outlier_report.csv"PORTFOLIO_STATS_FILE = "output/portfolio_stats.csv"# KPIs used for the Day 37 analysisKPIS = [    "net_profit_margin_pct",    "operating_profit_margin_pct",    "return_on_equity_pct",    "debt_to_equity",    "interest_coverage",    "asset_turnover",    "free_cash_flow_cr",    "capex_cr",    "earnings_per_share",    "book_value_per_share",]# Names based on the financial characteristics of each clusterCLUSTER_NAMES = {    0: "Diversified Core Companies",    1: "Growth & High-Margin Leaders",    2: "Leveraged Financials",    3: "High-Margin Defensive",    4: "Strategic Industrials",}def get_data():    """Retrieve data."""    conn = sqlite3.connect(DB_PATH)    ratios = pd.read_sql_query(        """        SELECT            company_id,            year,            net_profit_margin_pct,            operating_profit_margin_pct,            return_on_equity_pct,            debt_to_equity,            interest_coverage,            asset_turnover,            free_cash_flow_cr,            capex_cr,            earnings_per_share,            book_value_per_share,            revenue_cagr_5yr        FROM financial_ratios        """,        conn,    )    companies = pd.read_sql_query(        """        SELECT            id AS company_id,            company_name        FROM companies        """,        conn,    )    # The sectors table is the project's official 92-company universe.    sectors = pd.read_sql_query(        """        SELECT            company_id,            broad_sector        FROM sectors        """,        conn,    )    cashflow = pd.read_sql_query(        """        SELECT            company_id,            year,            operating_activity,            investing_activity        FROM cashflow        """,        conn,    )    conn.close()    return ratios, companies, sectors, cashflowdef get_latest_data(ratios):    """Retrieve latest data."""    ratios = ratios.sort_values(["company_id", "year"])    # Keep the latest annual record for each company.    latest = ratios.groupby("company_id").tail(1).copy()    return latestdef calculate_fcf_cagr(cashflow):    """Calculate fcf cagr."""    cashflow = cashflow.copy()    cashflow["operating_activity"] = pd.to_numeric(        cashflow["operating_activity"],        errors="coerce",    ).fillna(0)    cashflow["investing_activity"] = pd.to_numeric(        cashflow["investing_activity"],        errors="coerce",    ).fillna(0)    # Free Cash Flow = Operating Cash Flow + Investing Cash Flow    cashflow["free_cash_flow"] = (        cashflow["operating_activity"] + cashflow["investing_activity"]    )    cashflow = cashflow.sort_values(["company_id", "year"])    rows = []    for company_id, group in cashflow.groupby("company_id"):        if len(group) < 6:            continue        current = group.iloc[-1]["free_cash_flow"]        previous = group.iloc[-6]["free_cash_flow"]        # CAGR cannot be calculated from zero or negative values.        if current <= 0 or previous <= 0:            continue        cagr = ((current / previous) ** (1 / 5) - 1) * 100        rows.append(            {                "company_id": company_id,                "fcf_cagr_5yr": cagr,            }        )    return pd.DataFrame(rows)def create_cluster_profile(latest, labels):    """Create cluster profile."""    data = latest.merge(        labels[["company_id", "cluster_id"]],        on="company_id",        how="inner",    )    # All 5 features used for clustering.    features = [        "return_on_equity_pct",        "debt_to_equity",        "revenue_cagr_5yr",        "fcf_cagr_5yr",        "operating_profit_margin_pct",    ]    rows = []    for cluster_id, group in data.groupby("cluster_id"):        for feature in features:            values = pd.to_numeric(                group[feature],                errors="coerce",            ).dropna()            rows.append(                {                    "cluster_id": int(cluster_id),                    "cluster_name": CLUSTER_NAMES.get(                        int(cluster_id),                        f"Cluster {cluster_id}",                    ),                    "company_count": len(group),                    "metric": feature,                    "mean": values.mean(),                    "median": values.median(),                }            )    profile = pd.DataFrame(rows)    profile.to_csv(        CLUSTER_PROFILE_FILE,        index=False,    )    return profiledef update_cluster_names(labels, universe):    """Update cluster names."""    labels = labels.copy()    # Keep only the official 92-company universe.    labels = labels[labels["company_id"].isin(universe["company_id"])].copy()    labels["cluster_name"] = labels["cluster_id"].map(CLUSTER_NAMES)    labels.to_csv(        CLUSTER_LABELS_FILE,        index=False,    )    return labelsdef create_correlation_heatmap(latest):    """Create correlation heatmap."""    data = latest[KPIS].apply(        pd.to_numeric,        errors="coerce",    )    correlation = data.corr(method="pearson")    plt.figure(figsize=(14, 10))    sns.heatmap(        correlation,        annot=True,        fmt=".2f",        cmap="coolwarm",        center=0,    )    plt.title("Pearson Correlation Matrix - Nifty 100 KPIs")    plt.tight_layout()    plt.savefig(        CORRELATION_FILE,        dpi=200,        bbox_inches="tight",    )    plt.close()def create_outlier_report(    latest,    companies,    sectors,):    """Create outlier report."""    data = latest.merge(        companies,        on="company_id",        how="left",    )    data = data.merge(        sectors,        on="company_id",        how="inner",    )    outliers = []    for metric in KPIS:        data[metric] = pd.to_numeric(            data[metric],            errors="coerce",        )        # Calculate Z-score separately within        # each broad sector.        sector_mean = data.groupby("broad_sector")[metric].transform("mean")        sector_std = data.groupby("broad_sector")[metric].transform("std")        data["z_score"] = (data[metric] - sector_mean) / sector_std        flagged = data[data["z_score"].abs() > 3]        for _, row in flagged.iterrows():            outliers.append(                {                    "company_id": row["company_id"],                    "company_name": row["company_name"],                    "broad_sector": row["broad_sector"],                    "metric": metric,                    "value": row[metric],                    "z_score": row["z_score"],                }            )    outlier_report = pd.DataFrame(outliers)    if outlier_report.empty:        outlier_report = pd.DataFrame(            columns=[                "company_id",                "company_name",                "broad_sector",                "metric",                "value",                "z_score",            ]        )    outlier_report.to_csv(        OUTLIER_FILE,        index=False,    )    return outlier_reportdef create_portfolio_stats(latest):    """Create portfolio stats."""    data = latest[KPIS].apply(        pd.to_numeric,        errors="coerce",    )    stats = pd.DataFrame(        {            "P10": data.quantile(0.10),            "P25": data.quantile(0.25),            "P50": data.quantile(0.50),            "P75": data.quantile(0.75),            "P90": data.quantile(0.90),            "Mean": data.mean(),            "Std": data.std(),        }    )    stats.index.name = "KPI"    stats = stats.reset_index()    stats.to_csv(        PORTFOLIO_STATS_FILE,        index=False,    )    return statsdef main():    """Run the main workflow."""    os.makedirs(        "output",        exist_ok=True,    )    os.makedirs(        "reports",        exist_ok=True,    )    print("Loading data...")    ratios, companies, sectors, cashflow = get_data()    print(f"92-company universe: {sectors['company_id'].nunique()} companies")    print("Getting latest year data...")    latest = get_latest_data(ratios)    # Keep only the official 92-company universe.    latest = latest[latest["company_id"].isin(sectors["company_id"])].copy()    print(f"Latest data available: {len(latest)} companies")    print("Calculating FCF CAGR...")    fcf_cagr = calculate_fcf_cagr(cashflow)    latest = latest.merge(        fcf_cagr,        on="company_id",        how="left",    )    print("Reading cluster labels...")    labels = pd.read_csv(CLUSTER_LABELS_FILE)    print("Updating cluster names...")    labels = update_cluster_names(        labels,        sectors,    )    print(f"Cluster labels in 92-company universe: {len(labels)}")    print("Creating cluster profiles...")    profile = create_cluster_profile(        latest,        labels,    )    print("Creating correlation heatmap...")    create_correlation_heatmap(latest)    print("Detecting sector-wise outliers...")    outliers = create_outlier_report(        latest,        companies,        sectors,    )    print("Creating portfolio statistics...")    create_portfolio_stats(latest)    print("\nDay 37 completed successfully.")    print("\nCluster profile:")    print(profile.round(2).to_string(index=False))    print(f"\nOutliers found: {len(outliers)}")    print("\nFiles created:")    print(CLUSTER_PROFILE_FILE)    print(CORRELATION_FILE)    print(OUTLIER_FILE)    print(PORTFOLIO_STATS_FILE)if __name__ == "__main__":    main()

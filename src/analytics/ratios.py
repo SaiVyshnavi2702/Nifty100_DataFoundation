@@ -3,7 +3,6 @@
 import logging
 import math
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -143,11 +142,7 @@ def return_on_capital_employed(
 
     ebit = operating_profit + other_income
 
-    capital_employed = (
-        equity_capital
-        + reserves
-        + borrowings
-    )
+    capital_employed = equity_capital + reserves + borrowings
 
     if capital_employed <= 0:
         return None

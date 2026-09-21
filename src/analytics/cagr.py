@@ -52,16 +52,13 @@ def calculate_all_cagrs(values_by_year, end_year):
     result = {}
 
     for years in CAGR_YEARS:
-        value, flag = calculate_period_cagr(
-            values_by_year,
-            end_year,
-            years
-        )
+        value, flag = calculate_period_cagr(values_by_year, end_year, years)
 
         result[f"cagr_{years}yr"] = value
         result[f"cagr_{years}yr_flag"] = flag
 
     return result
+
 
 def calculate_financial_cagrs(
     revenue_by_year,
@@ -89,28 +86,16 @@ def calculate_financial_cagrs(
     )
 
     for years in CAGR_YEARS:
-        result[f"revenue_cagr_{years}yr"] = (
-            revenue_cagrs[f"cagr_{years}yr"]
-        )
+        result[f"revenue_cagr_{years}yr"] = revenue_cagrs[f"cagr_{years}yr"]
 
-        result[f"revenue_cagr_{years}yr_flag"] = (
-            revenue_cagrs[f"cagr_{years}yr_flag"]
-        )
+        result[f"revenue_cagr_{years}yr_flag"] = revenue_cagrs[f"cagr_{years}yr_flag"]
 
-        result[f"pat_cagr_{years}yr"] = (
-            pat_cagrs[f"cagr_{years}yr"]
-        )
+        result[f"pat_cagr_{years}yr"] = pat_cagrs[f"cagr_{years}yr"]
 
-        result[f"pat_cagr_{years}yr_flag"] = (
-            pat_cagrs[f"cagr_{years}yr_flag"]
-        )
+        result[f"pat_cagr_{years}yr_flag"] = pat_cagrs[f"cagr_{years}yr_flag"]
 
-        result[f"eps_cagr_{years}yr"] = (
-            eps_cagrs[f"cagr_{years}yr"]
-        )
+        result[f"eps_cagr_{years}yr"] = eps_cagrs[f"cagr_{years}yr"]
 
-        result[f"eps_cagr_{years}yr_flag"] = (
-            eps_cagrs[f"cagr_{years}yr_flag"]
-        )
+        result[f"eps_cagr_{years}yr_flag"] = eps_cagrs[f"cagr_{years}yr_flag"]
 
     return result

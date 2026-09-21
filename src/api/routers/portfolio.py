@@ -6,12 +6,17 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
+
 BASE_DIR = Path(__file__).resolve().parents[3]
+
 DB_PATH = BASE_DIR / "data" / "nifty100.db"
+
 
 @router.get("/portfolio/stats")
 def get_portfolio_stats():
+    """Retrieve portfolio stats."""
     conn = sqlite3.connect(DB_PATH)
+
     conn.row_factory = sqlite3.Row
 
     query = """
@@ -39,6 +44,7 @@ def get_portfolio_stats():
     """
 
     rows = conn.execute(query).fetchall()
+
     conn.close()
 
     kpis = {
@@ -55,11 +61,11 @@ def get_portfolio_stats():
     }
 
     for row in rows:
-        for kpi in kpis:
+        for kpi, values in kpis.items():
             value = row[kpi]
 
             if value is not None:
-                kpis[kpi].append(value)
+                values.append(value)
 
     result = []
 
@@ -69,6 +75,7 @@ def get_portfolio_stats():
 
         if len(values) == 1:
             p10 = p25 = p50 = p75 = p90 = values[0]
+
         else:
             q = quantiles(values, n=100, method="inclusive")
 

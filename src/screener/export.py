@@ -2,14 +2,13 @@ import sqlite3
 from pathlib import Path
 
 import pandas as pd
-from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.styles import Alignment, Font, PatternFill
 
 from src.screener.composite_score import (
-    calculate_sector_relative_score,
     add_historical_fcf_cagr,
+    calculate_sector_relative_score,
 )
 from src.screener.presets import PRESETS
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = PROJECT_ROOT / "data" / "nifty100.db"
@@ -40,7 +39,6 @@ KPI_COLUMNS = [
 ]
 
 
-
 GREEN_FILL = PatternFill(
     fill_type="solid",
     fgColor="C6EFCE",
@@ -69,31 +67,26 @@ PRESET_THRESHOLDS = {
         "free_cash_flow_cr": lambda x: x > 0,
         "revenue_cagr_5yr": lambda x: x > 10,
     },
-
     "Value Pick": {
         "pe_ratio": lambda x: x < 20,
         "pb_ratio": lambda x: x < 3.0,
         "debt_to_equity": lambda x: x < 2.0,
         "dividend_yield_pct": lambda x: x > 1,
     },
-
     "Growth Accelerator": {
         "pat_cagr_5yr": lambda x: x > 20,
         "revenue_cagr_5yr": lambda x: x > 15,
         "debt_to_equity": lambda x: x < 2.0,
     },
-
     "Dividend Champion": {
         "dividend_yield_pct": lambda x: x > 2,
         "free_cash_flow_cr": lambda x: x > 0,
     },
-
     "Debt-Free Blue Chip": {
         "debt_to_equity": lambda x: x == 0,
         "return_on_equity_pct": lambda x: x > 12,
         "sales": lambda x: x > 5000,
     },
-
     "Turnaround Watch": {
         "free_cash_flow_cr": lambda x: x > 0,
     },
@@ -193,8 +186,7 @@ def _latest_per_company(df):
     )
 
     result = (
-        result
-        .sort_values(
+        result.sort_values(
             ["company_id", "_year_sort"],
             ascending=[True, False],
         )
@@ -256,31 +248,19 @@ def select_kpis(df):
 
     if len(KPI_COLUMNS) != 20:
         raise ValueError(
-            f"Expected exactly 20 KPI columns, "
-            f"but found {len(KPI_COLUMNS)}."
+            f"Expected exactly 20 KPI columns, " f"but found {len(KPI_COLUMNS)}."
         )
 
-    missing_columns = [
-        column
-        for column in KPI_COLUMNS
-        if column not in df.columns
-    ]
+    missing_columns = [column for column in KPI_COLUMNS if column not in df.columns]
 
     if missing_columns:
-        raise KeyError(
-            "Missing Day 17 KPI columns: "
-            + ", ".join(missing_columns)
-        )
+        raise KeyError("Missing Day 17 KPI columns: " + ", ".join(missing_columns))
 
-    sorted_df = (
-        df
-        .sort_values(
-            by="composite_quality_score",
-            ascending=False,
-            na_position="last",
-        )
-        .reset_index(drop=True)
-    )
+    sorted_df = df.sort_values(
+        by="composite_quality_score",
+        ascending=False,
+        na_position="last",
+    ).reset_index(drop=True)
 
     return sorted_df[KPI_COLUMNS].reset_index(drop=True)
 
@@ -336,10 +316,7 @@ def _apply_excel_formatting(
     worksheet.freeze_panes = "A2"
     worksheet.auto_filter.ref = worksheet.dimensions
 
-    header_map = {
-        cell.column: cell.value
-        for cell in worksheet[1]
-    }
+    header_map = {cell.column: cell.value for cell in worksheet[1]}
 
     conditions = PRESET_THRESHOLDS.get(
         preset_name,
@@ -352,9 +329,7 @@ def _apply_excel_formatting(
     ):
         for cell in row:
 
-            column_name = header_map.get(
-                cell.column
-            )
+            column_name = header_map.get(cell.column)
 
             if column_name not in conditions:
                 continue
@@ -382,9 +357,7 @@ def _apply_excel_formatting(
                     len(str(cell.value)),
                 )
 
-        worksheet.column_dimensions[
-            column_cells[0].column_letter
-        ].width = min(
+        worksheet.column_dimensions[column_cells[0].column_letter].width = min(
             max(max_length + 2, 12),
             30,
         )
@@ -406,9 +379,7 @@ def export_all_presets():
     df = prepare_data()
 
     print()
-    print(
-        "Day 17 export preparation complete."
-    )
+    print("Day 17 export preparation complete.")
     print(
         "Companies scored:",
         len(df),
@@ -421,9 +392,7 @@ def export_all_presets():
 
         for preset_name, preset_function in PRESETS.items():
 
-            print(
-                f"Processing preset: {preset_name}"
-            )
+            print(f"Processing preset: {preset_name}")
 
             preset_result = preset_function(
                 df,
@@ -441,24 +410,17 @@ def export_all_presets():
                 index=False,
             )
 
-            worksheet = writer.sheets[
-                sheet_name
-            ]
+            worksheet = writer.sheets[sheet_name]
 
             _apply_excel_formatting(
                 worksheet,
                 preset_name,
             )
 
-            print(
-                f"{preset_name}: "
-                f"{len(preset_result)} companies"
-            )
+            print(f"{preset_name}: " f"{len(preset_result)} companies")
 
     print()
-    print(
-        "Day 17 export completed successfully."
-    )
+    print("Day 17 export completed successfully.")
     print(
         "Output:",
         OUTPUT_PATH,

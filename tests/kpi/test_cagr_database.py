@@ -29,6 +29,7 @@ def test_ttm_is_excluded():
     assert "TTM" not in data["pat"]
     assert "TTM" not in data["eps"]
 
+
 def test_calculate_company_cagrs():
     result = calculate_company_cagrs("ABB", 2024)
 
@@ -56,6 +57,7 @@ def test_calculate_company_cagrs_values():
     assert result["pat"]["cagr_10yr"] is not None
     assert result["eps"]["cagr_10yr"] is not None
 
+
 def test_calculate_company_cagrs_actual_values():
     result = calculate_company_cagrs("ABB", 2024)
 
@@ -70,6 +72,7 @@ def test_calculate_company_cagrs_actual_values():
     assert round(result["eps"]["cagr_3yr"], 2) == 20.24
     assert round(result["eps"]["cagr_5yr"], 2) == 21.66
     assert round(result["eps"]["cagr_10yr"], 2) == 19.77
+
 
 def test_company_cagr_insufficient_history():
     result = calculate_company_cagrs("ADANIGREEN", 2024)

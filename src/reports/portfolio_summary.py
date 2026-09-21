@@ -1,589 +1,1 @@
-"""
-Day 35 - Portfolio Summary PDF
-
-Creates a one-page portfolio summary for every company.
-
-Each page contains:
-- Company name
-- Ticker
-- Sector
-- Six KPIs
-- Trend arrows comparing latest annual year with previous annual year
-
-Output:
-reports/portfolio/portfolio_summary.pdf
-"""
-
-from pathlib import Path
-import sqlite3
-import math
-
-from reportlab.lib import colors
-from reportlab.lib.colors import HexColor
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.pdfgen import canvas
-
-
-BASE_DIR = Path(__file__).resolve().parents[2]
-
-DB_PATH = BASE_DIR / "data" / "nifty100.db"
-OUTPUT_DIR = BASE_DIR / "reports" / "portfolio"
-OUTPUT_PDF = OUTPUT_DIR / "portfolio_summary.pdf"
-
-
-NAVY = HexColor("#0B1F3A")
-LIGHT_GRAY = HexColor("#E8EDF3")
-MEDIUM_GRAY = HexColor("#6B7280")
-GREEN = HexColor("#16803C")
-RED = HexColor("#C62828")
-DARK_TEXT = HexColor("#1F2937")
-
-
-def clean_text(value):
-    """Convert database values to safe display text."""
-    if value is None:
-        return ""
-
-    return str(value).replace("\n", " ").strip()
-
-
-def is_number(value):
-    """Return True when value is a usable numeric value."""
-    if value is None:
-        return False
-
-    try:
-        value = float(value)
-        return math.isfinite(value)
-    except (TypeError, ValueError):
-        return False
-
-
-def format_percent(value):
-    """Format a percentage value."""
-    if not is_number(value):
-        return "N/A"
-
-    return f"{float(value):.2f}%"
-
-
-def format_ratio(value):
-    """Format a ratio value."""
-    if not is_number(value):
-        return "N/A"
-
-    return f"{float(value):.2f}"
-
-
-def calculate_yoy(current, previous):
-    """
-    Calculate year-over-year percentage growth.
-
-    Returns None when a valid comparison cannot be made.
-    """
-    if not is_number(current) or not is_number(previous):
-        return None
-
-    current = float(current)
-    previous = float(previous)
-
-    if previous == 0:
-        return None
-
-    return ((current - previous) / abs(previous)) * 100
-
-
-def trend_arrow(current, previous, lower_is_better=False):
-    """
-    Compare latest value with previous value.
-
-    Improvement threshold:
-    - within +/-2% = flat
-    - more than +2% = up
-    - less than -2% = down
-
-    For Debt / Equity, lower is considered better.
-    """
-    if not is_number(current) or not is_number(previous):
-        return "→", MEDIUM_GRAY
-
-    current = float(current)
-    previous = float(previous)
-
-    if previous == 0:
-        return "→", MEDIUM_GRAY
-
-    change_pct = ((current - previous) / abs(previous)) * 100
-
-    if abs(change_pct) <= 2:
-        return "→", MEDIUM_GRAY
-
-    if lower_is_better:
-        if change_pct < 0:
-            return "↑", GREEN
-
-        return "↓", RED
-
-    if change_pct > 0:
-        return "↑", GREEN
-
-    return "↓", RED
-
-
-# Database
-
-def get_connection():
-    return sqlite3.connect(DB_PATH)
-
-
-def get_companies(conn):
-    """
-    Get all companies with their sector.
-
-    If a company has no sector assignment, display N/A.
-    """
-    query = """
-        SELECT
-            c.id AS ticker,
-            c.company_name,
-            COALESCE(s.broad_sector, 'N/A') AS sector
-        FROM companies c
-        LEFT JOIN sectors s
-            ON c.id = s.company_id
-        ORDER BY c.id
-    """
-
-    return conn.execute(query).fetchall()
-
-
-def get_financial_data(conn, ticker):
-    """
-    Get annual financial data.
-
-    TTM rows are excluded because the assignment asks for
-    latest-year trend comparison.
-    """
-    query = """
-        SELECT
-            year,
-            sales,
-            net_profit
-        FROM profitandloss
-        WHERE company_id = ?
-          AND year != 'TTM'
-          AND year IS NOT NULL
-        ORDER BY CAST(year AS INTEGER)
-    """
-
-    rows = conn.execute(query, (ticker,)).fetchall()
-
-    return rows
-
-
-def get_ratio_data(conn, ticker):
-    """
-    Get annual financial ratio data.
-    """
-    query = """
-        SELECT
-            year,
-            return_on_equity_pct,
-            net_profit_margin_pct,
-            operating_profit_margin_pct,
-            debt_to_equity
-        FROM financial_ratios
-        WHERE company_id = ?
-          AND year IS NOT NULL
-        ORDER BY year
-    """
-
-    return conn.execute(query, (ticker,)).fetchall()
-
-
-# KPI preparation
-
-def get_company_kpis(conn, ticker):
-    """
-    Prepare latest and previous KPI values.
-    """
-
-    financial_rows = get_financial_data(conn, ticker)
-    ratio_rows = get_ratio_data(conn, ticker)
-
-    # Sales Growth and Profit Growth
-
-    sales_growth_latest = None
-    sales_growth_previous = None
-
-    profit_growth_latest = None
-    profit_growth_previous = None
-
-    if len(financial_rows) >= 2:
-        previous_year_row = financial_rows[-2]
-        latest_year_row = financial_rows[-1]
-
-        previous_sales = previous_year_row[1]
-        latest_sales = latest_year_row[1]
-
-        previous_profit = previous_year_row[2]
-        latest_profit = latest_year_row[2]
-
-        sales_growth_latest = calculate_yoy(
-            latest_sales,
-            previous_sales
-        )
-
-        # Need an additional year to calculate the previous
-        # year's growth rate.
-        if len(financial_rows) >= 3:
-            older_sales = financial_rows[-3][1]
-            older_profit = financial_rows[-3][2]
-
-            sales_growth_previous = calculate_yoy(
-                previous_sales,
-                older_sales
-            )
-
-            profit_growth_previous = calculate_yoy(
-                previous_profit,
-                older_profit
-            )
-
-        profit_growth_latest = calculate_yoy(
-            latest_profit,
-            previous_profit
-        )
-
-    # Ratio values
-
-    roe_latest = None
-    roe_previous = None
-
-    npm_latest = None
-    npm_previous = None
-
-    opm_latest = None
-    opm_previous = None
-
-    de_latest = None
-    de_previous = None
-
-    if ratio_rows:
-        latest = ratio_rows[-1]
-
-        roe_latest = latest[1]
-        npm_latest = latest[2]
-        opm_latest = latest[3]
-        de_latest = latest[4]
-
-        if len(ratio_rows) >= 2:
-            previous = ratio_rows[-2]
-
-            roe_previous = previous[1]
-            npm_previous = previous[2]
-            opm_previous = previous[3]
-            de_previous = previous[4]
-
-    return [
-        {
-            "name": "Sales Growth",
-            "value": format_percent(sales_growth_latest),
-            "current": sales_growth_latest,
-            "previous": sales_growth_previous,
-            "lower_is_better": False,
-        },
-        {
-            "name": "Profit Growth",
-            "value": format_percent(profit_growth_latest),
-            "current": profit_growth_latest,
-            "previous": profit_growth_previous,
-            "lower_is_better": False,
-        },
-        {
-            "name": "ROE",
-            "value": format_percent(roe_latest),
-            "current": roe_latest,
-            "previous": roe_previous,
-            "lower_is_better": False,
-        },
-        {
-            "name": "Net Profit Margin",
-            "value": format_percent(npm_latest),
-            "current": npm_latest,
-            "previous": npm_previous,
-            "lower_is_better": False,
-        },
-        {
-            "name": "Operating Margin",
-            "value": format_percent(opm_latest),
-            "current": opm_latest,
-            "previous": opm_previous,
-            "lower_is_better": False,
-        },
-        {
-            "name": "Debt / Equity",
-            "value": format_ratio(de_latest),
-            "current": de_latest,
-            "previous": de_previous,
-            "lower_is_better": True,
-        },
-    ]
-
-
-# PDF drawing
-
-def draw_header(pdf, ticker, company_name, sector, page_width, page_height):
-    """Draw company header."""
-
-    header_height = 38 * mm
-
-    pdf.setFillColor(NAVY)
-    pdf.rect(
-        0,
-        page_height - header_height,
-        page_width,
-        header_height,
-        fill=1,
-        stroke=0,
-    )
-
-    pdf.setFillColor(colors.white)
-
-    pdf.setFont("Helvetica-Bold", 20)
-    pdf.drawString(
-        18 * mm,
-        page_height - 16 * mm,
-        clean_text(company_name),
-    )
-
-    pdf.setFont("Helvetica-Bold", 11)
-    pdf.drawString(
-        18 * mm,
-        page_height - 24 * mm,
-        clean_text(ticker),
-    )
-
-    pdf.setFont("Helvetica", 10)
-    pdf.drawRightString(
-        page_width - 18 * mm,
-        page_height - 24 * mm,
-        clean_text(sector),
-    )
-
-
-def draw_kpi_card(
-    pdf,
-    x,
-    y,
-    width,
-    height,
-    name,
-    value,
-    arrow,
-    arrow_color,
-):
-    """Draw one KPI card."""
-
-    pdf.setFillColor(LIGHT_GRAY)
-    pdf.roundRect(
-        x,
-        y,
-        width,
-        height,
-        4 * mm,
-        fill=1,
-        stroke=0,
-    )
-
-    pdf.setFillColor(DARK_TEXT)
-    pdf.setFont("Helvetica-Bold", 10)
-
-    pdf.drawString(
-        x + 5 * mm,
-        y + height - 9 * mm,
-        name,
-    )
-
-    pdf.setFillColor(NAVY)
-    pdf.setFont("Helvetica-Bold", 18)
-
-    pdf.drawString(
-        x + 5 * mm,
-        y + 13 * mm,
-        value,
-    )
-
-    pdf.setFillColor(arrow_color)
-    pdf.setFont("Helvetica-Bold", 20)
-
-    pdf.drawRightString(
-        x + width - 5 * mm,
-        y + 13 * mm,
-        arrow,
-    )
-
-
-def draw_footer(pdf, ticker, page_width):
-    """Draw footer."""
-
-    pdf.setFillColor(MEDIUM_GRAY)
-    pdf.setFont("Helvetica", 8)
-
-    pdf.drawString(
-        18 * mm,
-        10 * mm,
-        "Nifty100 Data Foundation - Portfolio Summary",
-    )
-
-    pdf.drawRightString(
-        page_width - 18 * mm,
-        10 * mm,
-        clean_text(ticker),
-    )
-
-
-def generate_portfolio_pdf():
-    """Generate the complete portfolio summary PDF."""
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    conn = get_connection()
-
-    companies = get_companies(conn)
-
-    print(f"Total companies found: {len(companies)}")
-
-    page_width, page_height = A4
-
-    pdf = canvas.Canvas(
-        str(OUTPUT_PDF),
-        pagesize=A4,
-    )
-
-    pdf.setTitle("Nifty100 Portfolio Summary")
-
-    for index, (ticker, company_name, sector) in enumerate(companies, start=1):
-
-        ticker = clean_text(ticker)
-        company_name = clean_text(company_name)
-        sector = clean_text(sector) or "N/A"
-
-        print(
-            f"[{index}/{len(companies)}] "
-            f"Generating {ticker}..."
-        )
-
-        draw_header(
-            pdf,
-            ticker,
-            company_name,
-            sector,
-            page_width,
-            page_height,
-        )
-
-        # KPI section
-
-        pdf.setFillColor(NAVY)
-        pdf.setFont("Helvetica-Bold", 14)
-
-        pdf.drawString(
-            18 * mm,
-            page_height - 54 * mm,
-            "Key Performance Indicators",
-        )
-
-        kpis = get_company_kpis(conn, ticker)
-
-        card_width = 53 * mm
-        card_height = 42 * mm
-
-        x_positions = [
-            18 * mm,
-            78 * mm,
-            138 * mm,
-        ]
-
-        y_positions = [
-            page_height - 104 * mm,
-            page_height - 154 * mm,
-        ]
-
-        for i, kpi in enumerate(kpis):
-
-            row = i // 3
-            col = i % 3
-
-            x = x_positions[col]
-            y = y_positions[row]
-
-            arrow, arrow_color = trend_arrow(
-                kpi["current"],
-                kpi["previous"],
-                lower_is_better=kpi["lower_is_better"],
-            )
-
-            draw_kpi_card(
-                pdf,
-                x,
-                y,
-                card_width,
-                card_height,
-                kpi["name"],
-                kpi["value"],
-                arrow,
-                arrow_color,
-            )
-
-        # Trend explanation
-
-        pdf.setFillColor(NAVY)
-        pdf.setFont("Helvetica-Bold", 12)
-
-        pdf.drawString(
-            18 * mm,
-            55 * mm,
-            "Trend Indicator",
-        )
-
-        pdf.setFillColor(DARK_TEXT)
-        pdf.setFont("Helvetica", 9)
-
-        pdf.drawString(
-            18 * mm,
-            48 * mm,
-            "↑ Improved    ↓ Declined    → Flat within 2%",
-        )
-
-        pdf.setFillColor(MEDIUM_GRAY)
-        pdf.setFont("Helvetica", 8)
-
-        pdf.drawString(
-            18 * mm,
-            40 * mm,
-            "Trend arrows compare the latest available annual value "
-            "with the previous annual value.",
-        )
-
-        draw_footer(
-            pdf,
-            ticker,
-            page_width,
-        )
-
-        pdf.showPage()
-
-    pdf.save()
-    conn.close()
-
-    print()
-    print("Portfolio summary generation completed.")
-    print(f"Total pages: {len(companies)}")
-    print(f"Output: {OUTPUT_PDF}")
-
-
-# Main
-
-if __name__ == "__main__":
-    generate_portfolio_pdf()
+"""Day 35 - Portfolio Summary PDFCreates a one-page portfolio summary for every company.Each page contains:- Company name- Ticker- Sector- Six KPIs- Trend arrows comparing latest annual year with previous annual yearOutput:reports/portfolio/portfolio_summary.pdf"""import mathimport sqlite3from pathlib import Pathfrom reportlab.lib import colorsfrom reportlab.lib.colors import HexColorfrom reportlab.lib.pagesizes import A4from reportlab.lib.units import mmfrom reportlab.pdfgen import canvasBASE_DIR = Path(__file__).resolve().parents[2]DB_PATH = BASE_DIR / "data" / "nifty100.db"OUTPUT_DIR = BASE_DIR / "reports" / "portfolio"OUTPUT_PDF = OUTPUT_DIR / "portfolio_summary.pdf"NAVY = HexColor("#0B1F3A")LIGHT_GRAY = HexColor("#E8EDF3")MEDIUM_GRAY = HexColor("#6B7280")GREEN = HexColor("#16803C")RED = HexColor("#C62828")DARK_TEXT = HexColor("#1F2937")def clean_text(value):    """Convert database values to safe display text."""    if value is None:        return ""    return str(value).replace("\n", " ").strip()def is_number(value):    """Return True when value is a usable numeric value."""    if value is None:        return False    try:        value = float(value)        return math.isfinite(value)    except (TypeError, ValueError):        return Falsedef format_percent(value):    """Format a percentage value."""    if not is_number(value):        return "N/A"    return f"{float(value):.2f}%"def format_ratio(value):    """Format a ratio value."""    if not is_number(value):        return "N/A"    return f"{float(value):.2f}"def calculate_yoy(current, previous):    """    Calculate year-over-year percentage growth.    Returns None when a valid comparison cannot be made.    """    if not is_number(current) or not is_number(previous):        return None    current = float(current)    previous = float(previous)    if previous == 0:        return None    return ((current - previous) / abs(previous)) * 100def trend_arrow(current, previous, lower_is_better=False):    """    Compare latest value with previous value.    Improvement threshold:    - within +/-2% = flat    - more than +2% = up    - less than -2% = down    For Debt / Equity, lower is considered better.    """    if not is_number(current) or not is_number(previous):        return "→", MEDIUM_GRAY    current = float(current)    previous = float(previous)    if previous == 0:        return "→", MEDIUM_GRAY    change_pct = ((current - previous) / abs(previous)) * 100    if abs(change_pct) <= 2:        return "→", MEDIUM_GRAY    if lower_is_better:        if change_pct < 0:            return "↑", GREEN        return "↓", RED    if change_pct > 0:        return "↑", GREEN    return "↓", RED# Databasedef get_connection():    """Retrieve connection."""    return sqlite3.connect(DB_PATH)def get_companies(conn):    """    Get all companies with their sector.    If a company has no sector assignment, display N/A.    """    query = """        SELECT            c.id AS ticker,            c.company_name,            COALESCE(s.broad_sector, 'N/A') AS sector        FROM companies c        LEFT JOIN sectors s            ON c.id = s.company_id        ORDER BY c.id    """    return conn.execute(query).fetchall()def get_financial_data(conn, ticker):    """    Get annual financial data.    TTM rows are excluded because the assignment asks for    latest-year trend comparison.    """    query = """        SELECT            year,            sales,            net_profit        FROM profitandloss        WHERE company_id = ?          AND year != 'TTM'          AND year IS NOT NULL        ORDER BY CAST(year AS INTEGER)    """    rows = conn.execute(query, (ticker,)).fetchall()    return rowsdef get_ratio_data(conn, ticker):    """    Get annual financial ratio data.    """    query = """        SELECT            year,            return_on_equity_pct,            net_profit_margin_pct,            operating_profit_margin_pct,            debt_to_equity        FROM financial_ratios        WHERE company_id = ?          AND year IS NOT NULL        ORDER BY year    """    return conn.execute(query, (ticker,)).fetchall()# KPI preparationdef get_company_kpis(conn, ticker):    """    Prepare latest and previous KPI values.    """    financial_rows = get_financial_data(conn, ticker)    ratio_rows = get_ratio_data(conn, ticker)    # Sales Growth and Profit Growth    sales_growth_latest = None    sales_growth_previous = None    profit_growth_latest = None    profit_growth_previous = None    if len(financial_rows) >= 2:        previous_year_row = financial_rows[-2]        latest_year_row = financial_rows[-1]        previous_sales = previous_year_row[1]        latest_sales = latest_year_row[1]        previous_profit = previous_year_row[2]        latest_profit = latest_year_row[2]        sales_growth_latest = calculate_yoy(latest_sales, previous_sales)        # Need an additional year to calculate the previous        # year's growth rate.        if len(financial_rows) >= 3:            older_sales = financial_rows[-3][1]            older_profit = financial_rows[-3][2]            sales_growth_previous = calculate_yoy(previous_sales, older_sales)            profit_growth_previous = calculate_yoy(previous_profit, older_profit)        profit_growth_latest = calculate_yoy(latest_profit, previous_profit)    # Ratio values    roe_latest = None    roe_previous = None    npm_latest = None    npm_previous = None    opm_latest = None    opm_previous = None    de_latest = None    de_previous = None    if ratio_rows:        latest = ratio_rows[-1]        roe_latest = latest[1]        npm_latest = latest[2]        opm_latest = latest[3]        de_latest = latest[4]        if len(ratio_rows) >= 2:            previous = ratio_rows[-2]            roe_previous = previous[1]            npm_previous = previous[2]            opm_previous = previous[3]            de_previous = previous[4]    return [        {            "name": "Sales Growth",            "value": format_percent(sales_growth_latest),            "current": sales_growth_latest,            "previous": sales_growth_previous,            "lower_is_better": False,        },        {            "name": "Profit Growth",            "value": format_percent(profit_growth_latest),            "current": profit_growth_latest,            "previous": profit_growth_previous,            "lower_is_better": False,        },        {            "name": "ROE",            "value": format_percent(roe_latest),            "current": roe_latest,            "previous": roe_previous,            "lower_is_better": False,        },        {            "name": "Net Profit Margin",            "value": format_percent(npm_latest),            "current": npm_latest,            "previous": npm_previous,            "lower_is_better": False,        },        {            "name": "Operating Margin",            "value": format_percent(opm_latest),            "current": opm_latest,            "previous": opm_previous,            "lower_is_better": False,        },        {            "name": "Debt / Equity",            "value": format_ratio(de_latest),            "current": de_latest,            "previous": de_previous,            "lower_is_better": True,        },    ]# PDF drawingdef draw_header(pdf, ticker, company_name, sector, page_width, page_height):    """Draw company header."""    header_height = 38 * mm    pdf.setFillColor(NAVY)    pdf.rect(        0,        page_height - header_height,        page_width,        header_height,        fill=1,        stroke=0,    )    pdf.setFillColor(colors.white)    pdf.setFont("Helvetica-Bold", 20)    pdf.drawString(        18 * mm,        page_height - 16 * mm,        clean_text(company_name),    )    pdf.setFont("Helvetica-Bold", 11)    pdf.drawString(        18 * mm,        page_height - 24 * mm,        clean_text(ticker),    )    pdf.setFont("Helvetica", 10)    pdf.drawRightString(        page_width - 18 * mm,        page_height - 24 * mm,        clean_text(sector),    )def draw_kpi_card(    pdf,    x,    y,    width,    height,    name,    value,    arrow,    arrow_color,):    """Draw one KPI card."""    pdf.setFillColor(LIGHT_GRAY)    pdf.roundRect(        x,        y,        width,        height,        4 * mm,        fill=1,        stroke=0,    )    pdf.setFillColor(DARK_TEXT)    pdf.setFont("Helvetica-Bold", 10)    pdf.drawString(        x + 5 * mm,        y + height - 9 * mm,        name,    )    pdf.setFillColor(NAVY)    pdf.setFont("Helvetica-Bold", 18)    pdf.drawString(        x + 5 * mm,        y + 13 * mm,        value,    )    pdf.setFillColor(arrow_color)    pdf.setFont("Helvetica-Bold", 20)    pdf.drawRightString(        x + width - 5 * mm,        y + 13 * mm,        arrow,    )def draw_footer(pdf, ticker, page_width):    """Draw footer."""    pdf.setFillColor(MEDIUM_GRAY)    pdf.setFont("Helvetica", 8)    pdf.drawString(        18 * mm,        10 * mm,        "Nifty100 Data Foundation - Portfolio Summary",    )    pdf.drawRightString(        page_width - 18 * mm,        10 * mm,        clean_text(ticker),    )def generate_portfolio_pdf():    """Generate the complete portfolio summary PDF."""    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)    conn = get_connection()    companies = get_companies(conn)    print(f"Total companies found: {len(companies)}")    page_width, page_height = A4    pdf = canvas.Canvas(        str(OUTPUT_PDF),        pagesize=A4,    )    pdf.setTitle("Nifty100 Portfolio Summary")    for index, (ticker, company_name, sector) in enumerate(companies, start=1):        ticker = clean_text(ticker)        company_name = clean_text(company_name)        sector = clean_text(sector) or "N/A"        print(f"[{index}/{len(companies)}] " f"Generating {ticker}...")        draw_header(            pdf,            ticker,            company_name,            sector,            page_width,            page_height,        )        # KPI section        pdf.setFillColor(NAVY)        pdf.setFont("Helvetica-Bold", 14)        pdf.drawString(            18 * mm,            page_height - 54 * mm,            "Key Performance Indicators",        )        kpis = get_company_kpis(conn, ticker)        card_width = 53 * mm        card_height = 42 * mm        x_positions = [            18 * mm,            78 * mm,            138 * mm,        ]        y_positions = [            page_height - 104 * mm,            page_height - 154 * mm,        ]        for i, kpi in enumerate(kpis):            row = i // 3            col = i % 3            x = x_positions[col]            y = y_positions[row]            arrow, arrow_color = trend_arrow(                kpi["current"],                kpi["previous"],                lower_is_better=kpi["lower_is_better"],            )            draw_kpi_card(                pdf,                x,                y,                card_width,                card_height,                kpi["name"],                kpi["value"],                arrow,                arrow_color,            )        # Trend explanation        pdf.setFillColor(NAVY)        pdf.setFont("Helvetica-Bold", 12)        pdf.drawString(            18 * mm,            55 * mm,            "Trend Indicator",        )        pdf.setFillColor(DARK_TEXT)        pdf.setFont("Helvetica", 9)        pdf.drawString(            18 * mm,            48 * mm,            "↑ Improved    ↓ Declined    → Flat within 2%",        )        pdf.setFillColor(MEDIUM_GRAY)        pdf.setFont("Helvetica", 8)        pdf.drawString(            18 * mm,            40 * mm,            "Trend arrows compare the latest available annual value "            "with the previous annual value.",        )        draw_footer(            pdf,            ticker,            page_width,        )        pdf.showPage()    pdf.save()    conn.close()    print()    print("Portfolio summary generation completed.")    print(f"Total pages: {len(companies)}")    print(f"Output: {OUTPUT_PDF}")# Mainif __name__ == "__main__":    generate_portfolio_pdf()

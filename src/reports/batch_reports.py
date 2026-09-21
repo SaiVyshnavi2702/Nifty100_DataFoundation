@@ -1,4 +1,3 @@
-
 """
 Day 34 - Batch Report Generation
 
@@ -8,13 +7,12 @@ Companies with fewer than 3 years of Profit & Loss data
 are skipped and written to output/skipped_tearsheets.csv.
 """
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import pandas as pd
 
 from src.reports.tearsheet import generate_tearsheet
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -22,20 +20,14 @@ DB_PATH = PROJECT_ROOT / "data" / "nifty100.db"
 
 OUTPUT_DIR = PROJECT_ROOT / "reports" / "tearsheets"
 
-SKIPPED_FILE = (
-    PROJECT_ROOT
-    / "output"
-    / "skipped_tearsheets.csv"
-)
+SKIPPED_FILE = PROJECT_ROOT / "output" / "skipped_tearsheets.csv"
 
 
 def get_company_tickers():
     """Return all company tickers from the database."""
 
     if not DB_PATH.exists():
-        raise FileNotFoundError(
-            f"Database not found: {DB_PATH}"
-        )
+        raise FileNotFoundError(f"Database not found: {DB_PATH}")
 
     with sqlite3.connect(DB_PATH) as connection:
         df = pd.read_sql_query(
@@ -86,25 +78,18 @@ def generate_company_batch():
     generated = []
     skipped = []
 
-    print(
-        f"Total companies found: {len(tickers)}"
-    )
+    print(f"Total companies found: {len(tickers)}")
 
     print()
 
     for index, ticker in enumerate(
         tickers,
-        
         start=1,
     ):
 
-        print(
-            f"[{index}/{len(tickers)}] Processing {ticker}..."
-        )
+        print(f"[{index}/{len(tickers)}] Processing {ticker}...")
 
-        year_count = get_year_count(
-            ticker
-        )
+        year_count = get_year_count(ticker)
 
         if year_count < 3:
 
@@ -116,17 +101,13 @@ def generate_company_batch():
                 }
             )
 
-            print(
-                f"  SKIPPED - only {year_count} year(s) of data"
-            )
+            print(f"  SKIPPED - only {year_count} year(s) of data")
 
             continue
 
         try:
 
-            output_file = generate_tearsheet(
-                ticker
-            )
+            output_file = generate_tearsheet(ticker)
 
             generated.append(
                 {
@@ -136,15 +117,11 @@ def generate_company_batch():
                 }
             )
 
-            print(
-                f"  CREATED - {output_file.name}"
-            )
+            print(f"  CREATED - {output_file.name}")
 
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
 
-            print(
-                f"  ERROR - {error}"
-            )
+            print(f"  ERROR - {error}")
 
     skipped_df = pd.DataFrame(
         skipped,
@@ -162,18 +139,10 @@ def generate_company_batch():
 
     print()
     print("Batch generation completed.")
-    print(
-        f"Total companies: {len(tickers)}"
-    )
-    print(
-        f"Generated tearsheets: {len(generated)}"
-    )
-    print(
-        f"Skipped companies: {len(skipped)}"
-    )
-    print(
-        f"Skipped file: {SKIPPED_FILE}"
-    )
+    print(f"Total companies: {len(tickers)}")
+    print(f"Generated tearsheets: {len(generated)}")
+    print(f"Skipped companies: {len(skipped)}")
+    print(f"Skipped file: {SKIPPED_FILE}")
 
 
 def main():
@@ -184,4 +153,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

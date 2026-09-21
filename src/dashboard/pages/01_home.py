@@ -4,8 +4,6 @@ import streamlit as st
 
 from dashboard.utils.db import get_companies, get_ratios, get_sectors, get_valuation
 
-
-
 st.set_page_config(
     page_title="Nifty 100 Analytics",
     layout="wide",
@@ -36,9 +34,7 @@ sectors = get_sectors()
 ratio_rows = []
 
 for company_id in companies["id"]:
-    company_name = companies.loc[
-        companies["id"] == company_id, "company_name"
-    ].iloc[0]
+    company_name = companies.loc[companies["id"] == company_id, "company_name"].iloc[0]
 
     ratios = get_ratios(company_name, year)
 
@@ -58,9 +54,7 @@ else:
 valuation_rows = []
 
 for company_id in companies["id"]:
-    company_name = companies.loc[
-        companies["id"] == company_id, "company_name"
-    ].iloc[0]
+    company_name = companies.loc[companies["id"] == company_id, "company_name"].iloc[0]
 
     valuation = get_valuation(company_name)
 
@@ -85,12 +79,7 @@ if not ratios_df.empty:
     median_de = ratios_df["debt_to_equity"].median()
     median_revenue_cagr = ratios_df["revenue_cagr_5yr"].median()
 
-    debt_free_count = (
-        ratios_df["debt_to_equity"]
-        .dropna()
-        .eq(0)
-        .sum()
-    )
+    debt_free_count = ratios_df["debt_to_equity"].dropna().eq(0).sum()
 
     top_companies = (
         ratios_df[
@@ -150,11 +139,7 @@ with col4:
 with col5:
     st.metric(
         "Median Revenue CAGR 5yr",
-        (
-            f"{median_revenue_cagr:.2f}%"
-            if pd.notna(median_revenue_cagr)
-            else "N/A"
-        ),
+        (f"{median_revenue_cagr:.2f}%" if pd.notna(median_revenue_cagr) else "N/A"),
     )
 
 with col6:
@@ -188,7 +173,7 @@ fig = px.pie(
 
 fig.update_layout(
     showlegend=True,
-    margin=dict(t=20, b=20, l=20, r=20),
+    margin={"t": 20, "b": 20, "l": 20, "r": 20},
 )
 
 
@@ -216,6 +201,4 @@ if not top_companies.empty:
         hide_index=True,
     )
 else:
-    st.info(
-        "No composite quality score data is available for the selected year."
-    )
+    st.info("No composite quality score data is available for the selected year.")

@@ -1,4 +1,3 @@
-
 """
 Day 33 - Company PDF Tearsheet
 
@@ -21,12 +20,11 @@ Page 2:
 The layout is designed to fit on exactly two A4 pages.
 """
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
 from reportlab.lib.enums import TA_LEFT
@@ -34,9 +32,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.platypus import Paragraph
 from reportlab.pdfgen import canvas
-
+from reportlab.platypus import Paragraph
 
 # Paths
 
@@ -44,9 +41,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DB_PATH = PROJECT_ROOT / "data" / "nifty100.db"
 OUTPUT_DIR = PROJECT_ROOT / "reports" / "tearsheets"
-CAPITAL_ALLOCATION_FILE = (
-    PROJECT_ROOT / "output" / "capital_allocation.csv"
-)
+CAPITAL_ALLOCATION_FILE = PROJECT_ROOT / "output" / "capital_allocation.csv"
 
 
 # Page settings
@@ -78,13 +73,12 @@ WHITE = colors.white
 
 # Database helpers
 
+
 def query_database(sql, params=()):
     """Run a SQL query against the company database."""
 
     if not DB_PATH.exists():
-        raise FileNotFoundError(
-            f"Database not found: {DB_PATH}"
-        )
+        raise FileNotFoundError(f"Database not found: {DB_PATH}")
 
     with sqlite3.connect(DB_PATH) as connection:
         return pd.read_sql_query(
@@ -117,9 +111,7 @@ def load_company_data(ticker):
     )
 
     if company.empty:
-        raise ValueError(
-            f"Company not found: {ticker}"
-        )
+        raise ValueError(f"Company not found: {ticker}")
 
     profit_and_loss = query_database(
         """
@@ -219,17 +211,12 @@ def load_company_data(ticker):
 
     if CAPITAL_ALLOCATION_FILE.exists():
 
-        capital_allocation = pd.read_csv(
-            CAPITAL_ALLOCATION_FILE
-        )
+        capital_allocation = pd.read_csv(CAPITAL_ALLOCATION_FILE)
 
         if "company_id" in capital_allocation.columns:
 
             capital_allocation = capital_allocation[
-                capital_allocation["company_id"]
-                .astype(str)
-                .str.upper()
-                == ticker
+                capital_allocation["company_id"].astype(str).str.upper() == ticker
             ].copy()
 
     return {
@@ -247,6 +234,7 @@ def load_company_data(ticker):
 
 # Data helpers
 
+
 def clean_dataframe(df):
     """Clean the year column and remove invalid rows."""
 
@@ -260,9 +248,7 @@ def clean_dataframe(df):
         errors="coerce",
     )
 
-    result = result.dropna(
-        subset=["year"]
-    )
+    result = result.dropna(subset=["year"])
 
     result["year"] = result["year"].astype(int)
 
@@ -275,9 +261,7 @@ def latest_value(df, column):
     if df.empty or column not in df.columns:
         return None
 
-    valid_rows = df.dropna(
-        subset=[column]
-    )
+    valid_rows = df.dropna(subset=[column])
 
     if valid_rows.empty:
         return None
@@ -314,6 +298,7 @@ def format_crore(value):
 
 # ReportLab drawing helpers
 
+
 def draw_text(
     pdf,
     text,
@@ -325,11 +310,7 @@ def draw_text(
 ):
     """Draw normal text."""
 
-    font = (
-        "Helvetica-Bold"
-        if bold
-        else "Helvetica"
-    )
+    font = "Helvetica-Bold" if bold else "Helvetica"
 
     pdf.setFont(font, size)
     pdf.setFillColor(color)
@@ -400,9 +381,7 @@ def draw_kpi_card(
 
     pdf.setFillColor(LIGHT_BLUE)
 
-    pdf.setStrokeColor(
-        HexColor("#D3E2EE")
-    )
+    pdf.setStrokeColor(HexColor("#D3E2EE"))
 
     pdf.setLineWidth(0.7)
 
@@ -440,17 +419,11 @@ def draw_kpi_card(
 def draw_kpis(pdf, data):
     """Draw six KPI cards in two rows of three."""
 
-    pl = clean_dataframe(
-        data["pl"]
-    )
+    pl = clean_dataframe(data["pl"])
 
-    ratios = clean_dataframe(
-        data["ratios"]
-    )
+    ratios = clean_dataframe(data["ratios"])
 
-    market = clean_dataframe(
-        data["market"]
-    )
+    market = clean_dataframe(data["market"])
 
     revenue = latest_value(
         pl,
@@ -479,9 +452,7 @@ def draw_kpis(pdf, data):
 
     company = data["company"]
 
-    roce = company.get(
-        "roce_percentage"
-    )
+    roce = company.get("roce_percentage")
 
     if roce is None or pd.isna(roce):
         roce = None
@@ -517,36 +488,20 @@ def draw_kpis(pdf, data):
     right = 18 * mm
     gap = 5 * mm
 
-    card_width = (
-        PAGE_WIDTH
-        - left
-        - right
-        - (2 * gap)
-    ) / 3
+    card_width = (PAGE_WIDTH - left - right - (2 * gap)) / 3
 
     card_height = 24 * mm
 
-    first_row_y = (
-        PAGE_HEIGHT
-        - 78 * mm
-    )
+    first_row_y = PAGE_HEIGHT - 78 * mm
 
-    second_row_y = (
-        PAGE_HEIGHT
-        - 107 * mm
-    )
+    second_row_y = PAGE_HEIGHT - 107 * mm
 
     for index, (label, value) in enumerate(kpis):
 
         row = index // 3
         column = index % 3
 
-        x = (
-            left
-            + column * (
-                card_width + gap
-            )
-        )
+        x = left + column * (card_width + gap)
 
         if row == 0:
             y = first_row_y
@@ -566,6 +521,7 @@ def draw_kpis(pdf, data):
 
 # Matplotlib helpers
 
+
 def save_chart(fig, filename):
     """Save a Matplotlib chart."""
 
@@ -574,9 +530,7 @@ def save_chart(fig, filename):
         exist_ok=True,
     )
 
-    chart_path = (
-        OUTPUT_DIR / filename
-    )
+    chart_path = OUTPUT_DIR / filename
 
     fig.savefig(
         chart_path,
@@ -603,6 +557,7 @@ def clean_chart_axes(ax):
 
 # Page 1 charts
 
+
 def create_revenue_chart(df, ticker):
     """Create the 10-year revenue bar chart."""
 
@@ -613,9 +568,7 @@ def create_revenue_chart(df, ticker):
 
     df = df.tail(10)
 
-    fig, ax = plt.subplots(
-        figsize=(4.8, 2.2)
-    )
+    fig, ax = plt.subplots(figsize=(4.8, 2.2))
 
     ax.bar(
         df["year"].astype(str),
@@ -666,9 +619,7 @@ def create_profit_chart(df, ticker):
 
     df = df.tail(10)
 
-    fig, ax = plt.subplots(
-        figsize=(4.8, 2.2)
-    )
+    fig, ax = plt.subplots(figsize=(4.8, 2.2))
 
     ax.bar(
         df["year"].astype(str),
@@ -724,9 +675,7 @@ def create_roe_roce_chart(data, ticker):
     No chart grid lines.
     """
 
-    ratios = clean_dataframe(
-        data["ratios"]
-    )
+    ratios = clean_dataframe(data["ratios"])
 
     if ratios.empty:
         return None
@@ -740,16 +689,9 @@ def create_roe_roce_chart(data, ticker):
         errors="coerce",
     )
 
-    company_roce = data[
-        "company"
-    ].get(
-        "roce_percentage"
-    )
+    company_roce = data["company"].get("roce_percentage")
 
-    if (
-        company_roce is not None
-        and not pd.isna(company_roce)
-    ):
+    if company_roce is not None and not pd.isna(company_roce):
 
         roce = pd.Series(
             [company_roce] * len(ratios),
@@ -763,9 +705,7 @@ def create_roe_roce_chart(data, ticker):
             index=ratios.index,
         )
 
-    fig, ax1 = plt.subplots(
-        figsize=(9.7, 2.25)
-    )
+    fig, ax1 = plt.subplots(figsize=(9.7, 2.25))
 
     ax2 = ax1.twinx()
 
@@ -852,12 +792,11 @@ def create_roe_roce_chart(data, ticker):
 
 # Page 1
 
+
 def draw_page_one(pdf, data):
     """Draw page one."""
 
-    company_name = data[
-        "company"
-    ]["company_name"]
+    company_name = data["company"]["company_name"]
 
     ticker = data["ticker"]
 
@@ -886,10 +825,7 @@ def draw_page_one(pdf, data):
     chart_height = 43 * mm
     chart_width = 82 * mm
 
-    if (
-        revenue_chart
-        and revenue_chart.exists()
-    ):
+    if revenue_chart and revenue_chart.exists():
 
         pdf.drawImage(
             str(revenue_chart),
@@ -902,10 +838,7 @@ def draw_page_one(pdf, data):
             mask="auto",
         )
 
-    if (
-        profit_chart
-        and profit_chart.exists()
-    ):
+    if profit_chart and profit_chart.exists():
 
         pdf.drawImage(
             str(profit_chart),
@@ -923,10 +856,7 @@ def draw_page_one(pdf, data):
         ticker,
     )
 
-    if (
-        roe_roce_chart
-        and roe_roce_chart.exists()
-    ):
+    if roe_roce_chart and roe_roce_chart.exists():
 
         pdf.drawImage(
             str(roe_roce_chart),
@@ -951,6 +881,7 @@ def draw_page_one(pdf, data):
 
 # Page 2 charts
 
+
 def create_balance_sheet_chart(df, ticker):
     """Create the balance sheet composition stacked bar."""
 
@@ -971,10 +902,7 @@ def create_balance_sheet_chart(df, ticker):
         errors="coerce",
     ).fillna(0)
 
-    equity = (
-        equity_capital
-        + reserves
-    )
+    equity = equity_capital + reserves
 
     borrowings = pd.to_numeric(
         df["borrowings"],
@@ -988,9 +916,7 @@ def create_balance_sheet_chart(df, ticker):
 
     years = df["year"].astype(str)
 
-    fig, ax = plt.subplots(
-        figsize=(9.8, 2.8)
-    )
+    fig, ax = plt.subplots(figsize=(9.8, 2.8))
 
     ax.bar(
         years,
@@ -1101,23 +1027,15 @@ def create_cash_flow_chart(df, ticker):
     ]
 
     valid_components = [
-        (label, value)
-        for label, value in components
-        if not pd.isna(value)
+        (label, value) for label, value in components if not pd.isna(value)
     ]
 
     if not valid_components:
         return None
 
-    labels = [
-        label
-        for label, _ in valid_components
-    ]
+    labels = [label for label, _ in valid_components]
 
-    values = [
-        value
-        for _, value in valid_components
-    ]
+    values = [value for _, value in valid_components]
 
     cumulative = 0
 
@@ -1128,29 +1046,19 @@ def create_cash_flow_chart(df, ticker):
 
         if value >= 0:
 
-            bottoms.append(
-                cumulative
-            )
+            bottoms.append(cumulative)
 
-            heights.append(
-                value
-            )
+            heights.append(value)
 
         else:
 
-            bottoms.append(
-                cumulative + value
-            )
+            bottoms.append(cumulative + value)
 
-            heights.append(
-                abs(value)
-            )
+            heights.append(abs(value))
 
         cumulative += value
 
-    fig, ax = plt.subplots(
-        figsize=(9.8, 2.7)
-    )
+    fig, ax = plt.subplots(figsize=(9.8, 2.7))
 
     for index, value in enumerate(values):
 
@@ -1169,10 +1077,7 @@ def create_cash_flow_chart(df, ticker):
 
         if value >= 0:
 
-            label_y = (
-                bottoms[index]
-                + heights[index]
-            )
+            label_y = bottoms[index] + heights[index]
 
             vertical_alignment = "bottom"
 
@@ -1188,9 +1093,7 @@ def create_cash_flow_chart(df, ticker):
             1,
         )
 
-        label_offset = (
-            value_range * 0.03
-        )
+        label_offset = value_range * 0.03
 
         if value >= 0:
             label_y += label_offset
@@ -1223,25 +1126,17 @@ def create_cash_flow_chart(df, ticker):
             1,
         )
 
-        label_offset = (
-            value_range * 0.03
-        )
+        label_offset = value_range * 0.03
 
         if net_cash >= 0:
 
-            label_y = (
-                net_cash
-                + label_offset
-            )
+            label_y = net_cash + label_offset
 
             vertical_alignment = "bottom"
 
         else:
 
-            label_y = (
-                net_cash
-                - label_offset
-            )
+            label_y = net_cash - label_offset
 
             vertical_alignment = "top"
 
@@ -1254,19 +1149,11 @@ def create_cash_flow_chart(df, ticker):
             fontsize=7,
         )
 
-    x_labels = (
-        labels
-        + [""]
-        + ["Net Cash Flow"]
-    )
+    x_labels = labels + [""] + ["Net Cash Flow"]
 
-    ax.set_xticks(
-        range(len(values) + 2)
-    )
+    ax.set_xticks(range(len(values) + 2))
 
-    ax.set_xticklabels(
-        x_labels
-    )
+    ax.set_xticklabels(x_labels)
 
     ax.axhline(
         0,
@@ -1309,6 +1196,7 @@ def create_cash_flow_chart(df, ticker):
 
 # Pros / Cons
 
+
 def get_pros_and_cons(data):
     """Return company pros and cons."""
 
@@ -1325,30 +1213,18 @@ def get_pros_and_cons(data):
         pro = row.get("pros")
         con = row.get("cons")
 
-        if (
-            pro is not None
-            and not pd.isna(pro)
-        ):
+        if pro is not None and not pd.isna(pro):
 
             text = str(pro).strip()
 
-            if (
-                text
-                and text.lower() != "nan"
-            ):
+            if text and text.lower() != "nan":
                 pros.append(text)
 
-        if (
-            con is not None
-            and not pd.isna(con)
-        ):
+        if con is not None and not pd.isna(con):
 
             text = str(con).strip()
 
-            if (
-                text
-                and text.lower() != "nan"
-            ):
+            if text and text.lower() != "nan":
                 cons.append(text)
 
     return pros, cons
@@ -1373,9 +1249,7 @@ def draw_wrapped_bullet(
         alignment=TA_LEFT,
     )
 
-    pdf.setFillColor(
-        bullet_color
-    )
+    pdf.setFillColor(bullet_color)
 
     pdf.setFont(
         "Helvetica-Bold",
@@ -1393,9 +1267,7 @@ def draw_wrapped_bullet(
         style,
     )
 
-    paragraph_width = (
-        width - 7 * mm
-    )
+    paragraph_width = width - 7 * mm
 
     paragraph_height = paragraph.wrap(
         paragraph_width,
@@ -1408,19 +1280,13 @@ def draw_wrapped_bullet(
         y - paragraph_height + 3,
     )
 
-    return (
-        y
-        - paragraph_height
-        - 3 * mm
-    )
+    return y - paragraph_height - 3 * mm
 
 
 def draw_pros_and_cons(pdf, data):
     """Draw the Pros and Cons sections."""
 
-    pros, cons = get_pros_and_cons(
-        data
-    )
+    pros, cons = get_pros_and_cons(data)
 
     left = 18 * mm
     width = 174 * mm
@@ -1437,10 +1303,7 @@ def draw_pros_and_cons(pdf, data):
         bold=True,
     )
 
-    y = (
-        pros_y
-        - 7 * mm
-    )
+    y = pros_y - 7 * mm
 
     if not pros:
 
@@ -1478,10 +1341,7 @@ def draw_pros_and_cons(pdf, data):
         bold=True,
     )
 
-    y = (
-        cons_y
-        - 7 * mm
-    )
+    y = cons_y - 7 * mm
 
     if not cons:
 
@@ -1510,12 +1370,11 @@ def draw_pros_and_cons(pdf, data):
 
 # Capital allocation
 
+
 def get_capital_allocation(data):
     """Get the latest capital allocation pattern."""
 
-    df = data[
-        "capital_allocation"
-    ]
+    df = data["capital_allocation"]
 
     if df.empty:
         return "Not available"
@@ -1530,27 +1389,18 @@ def get_capital_allocation(data):
         errors="coerce",
     )
 
-    df = df.dropna(
-        subset=["year"]
-    )
+    df = df.dropna(subset=["year"])
 
     if df.empty:
         return "Not available"
 
-    df = df.sort_values(
-        "year"
-    )
+    df = df.sort_values("year")
 
     latest_row = df.iloc[-1]
 
-    label = latest_row.get(
-        "pattern_label"
-    )
+    label = latest_row.get("pattern_label")
 
-    if (
-        label is None
-        or pd.isna(label)
-    ):
+    if label is None or pd.isna(label):
         return "Not available"
 
     return str(label)
@@ -1559,22 +1409,16 @@ def get_capital_allocation(data):
 def draw_capital_allocation(pdf, data):
     """Draw the capital allocation badge."""
 
-    label = get_capital_allocation(
-        data
-    )
+    label = get_capital_allocation(data)
 
     x = 18 * mm
     y = 18 * mm
     width = 174 * mm
     height = 25 * mm
 
-    pdf.setFillColor(
-        LIGHT_BLUE
-    )
+    pdf.setFillColor(LIGHT_BLUE)
 
-    pdf.setStrokeColor(
-        HexColor("#BFD7EA")
-    )
+    pdf.setStrokeColor(HexColor("#BFD7EA"))
 
     pdf.roundRect(
         x,
@@ -1598,9 +1442,7 @@ def draw_capital_allocation(pdf, data):
 
     badge_font_size = 10
 
-    max_badge_width = (
-        width - 65 * mm
-    )
+    max_badge_width = width - 65 * mm
 
     text_width = stringWidth(
         label,
@@ -1608,10 +1450,7 @@ def draw_capital_allocation(pdf, data):
         badge_font_size,
     )
 
-    if (
-        text_width + 14 * mm
-        > max_badge_width
-    ):
+    if text_width + 14 * mm > max_badge_width:
 
         badge_font_size = 8
 
@@ -1626,16 +1465,9 @@ def draw_capital_allocation(pdf, data):
         max_badge_width,
     )
 
-    badge_x = (
-        x
-        + width
-        - badge_width
-        - 7 * mm
-    )
+    badge_x = x + width - badge_width - 7 * mm
 
-    pdf.setFillColor(
-        NAVY
-    )
+    pdf.setFillColor(NAVY)
 
     pdf.roundRect(
         badge_x,
@@ -1660,12 +1492,11 @@ def draw_capital_allocation(pdf, data):
 
 # Page 2
 
+
 def draw_page_two(pdf, data):
     """Draw page two."""
 
-    company_name = data[
-        "company"
-    ]["company_name"]
+    company_name = data["company"]["company_name"]
 
     ticker = data["ticker"]
 
@@ -1685,17 +1516,12 @@ def draw_page_two(pdf, data):
         bold=True,
     )
 
-    balance_chart = (
-        create_balance_sheet_chart(
-            data["balance_sheet"],
-            ticker,
-        )
+    balance_chart = create_balance_sheet_chart(
+        data["balance_sheet"],
+        ticker,
     )
 
-    if (
-        balance_chart
-        and balance_chart.exists()
-    ):
+    if balance_chart and balance_chart.exists():
 
         pdf.drawImage(
             str(balance_chart),
@@ -1708,17 +1534,12 @@ def draw_page_two(pdf, data):
             mask="auto",
         )
 
-    cash_chart = (
-        create_cash_flow_chart(
-            data["cash_flow"],
-            ticker,
-        )
+    cash_chart = create_cash_flow_chart(
+        data["cash_flow"],
+        ticker,
     )
 
-    if (
-        cash_chart
-        and cash_chart.exists()
-    ):
+    if cash_chart and cash_chart.exists():
 
         pdf.drawImage(
             str(cash_chart),
@@ -1744,31 +1565,25 @@ def draw_page_two(pdf, data):
 
 # PDF generation
 
+
 def generate_tearsheet(ticker):
     """Generate a two-page company tearsheet."""
 
-    data = load_company_data(
-        ticker
-    )
+    data = load_company_data(ticker)
 
     OUTPUT_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    output_file = (
-        OUTPUT_DIR
-        / f"{data['ticker']}_tearsheet.pdf"
-    )
+    output_file = OUTPUT_DIR / f"{data['ticker']}_tearsheet.pdf"
 
     pdf = canvas.Canvas(
         str(output_file),
         pagesize=A4,
     )
 
-    pdf.setTitle(
-        f"{data['ticker']} Company Tearsheet"
-    )
+    pdf.setTitle(f"{data['ticker']} Company Tearsheet")
 
     draw_page_one(
         pdf,
@@ -1791,6 +1606,7 @@ def generate_tearsheet(ticker):
 
 # Main
 
+
 def main():
     """Generate tearsheets for the five required test companies."""
 
@@ -1803,13 +1619,9 @@ def main():
     ]
 
     for ticker in tickers:
-        output_file = generate_tearsheet(
-            ticker
-        )
+        output_file = generate_tearsheet(ticker)
 
-        print(
-            f"Created: {output_file}"
-        )
+        print(f"Created: {output_file}")
 
 
 if __name__ == "__main__":

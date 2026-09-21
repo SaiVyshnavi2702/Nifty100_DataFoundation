@@ -1,15 +1,14 @@
 import pandas as pd
-import streamlit as st
 import plotly.graph_objects as go
+import streamlit as st
 
 from dashboard.utils.db import (
     get_companies,
-    get_ratios,
+    get_company_sector,
     get_pl,
     get_pros_and_cons,
-    get_company_sector,
+    get_ratios,
 )
-
 
 st.set_page_config(
     page_title="Company Profile",
@@ -42,12 +41,17 @@ if search:
     search_text = search.strip().lower()
 
     matches = companies[
-        companies["company_name"].astype(str).str.lower().str.contains(
+        companies["company_name"]
+        .astype(str)
+        .str.lower()
+        .str.contains(
             search_text,
             na=False,
         )
-        |
-        companies["id"].astype(str).str.lower().str.contains(
+        | companies["id"]
+        .astype(str)
+        .str.lower()
+        .str.contains(
             search_text,
             na=False,
         )
@@ -68,9 +72,7 @@ else:
     )
 
 
-company = companies[
-    companies["company_name"] == selected_company
-].iloc[0]
+company = companies[companies["company_name"] == selected_company].iloc[0]
 
 ticker = company["id"]
 
@@ -122,9 +124,7 @@ ratios["year"] = pd.to_numeric(
     errors="coerce",
 )
 
-ratios = ratios.dropna(
-    subset=["year"]
-)
+ratios = ratios.dropna(subset=["year"])
 
 ratios["year"] = ratios["year"].astype(int)
 
@@ -177,9 +177,7 @@ with col2:
 with col3:
     st.metric(
         "Net Profit Margin",
-        f"{net_margin:.2f}%"
-        if pd.notna(net_margin)
-        else "N/A",
+        f"{net_margin:.2f}%" if pd.notna(net_margin) else "N/A",
     )
 
 
@@ -188,25 +186,19 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(
         "D/E",
-        f"{debt_equity:.2f}"
-        if pd.notna(debt_equity)
-        else "N/A",
+        f"{debt_equity:.2f}" if pd.notna(debt_equity) else "N/A",
     )
 
 with col2:
     st.metric(
         "Revenue CAGR 5yr",
-        f"{revenue_cagr:.2f}%"
-        if pd.notna(revenue_cagr)
-        else "N/A",
+        f"{revenue_cagr:.2f}%" if pd.notna(revenue_cagr) else "N/A",
     )
 
 with col3:
     st.metric(
         "FCF",
-        f"{fcf:,.2f} Cr"
-        if pd.notna(fcf)
-        else "N/A",
+        f"{fcf:,.2f} Cr" if pd.notna(fcf) else "N/A",
     )
 
 
@@ -222,9 +214,7 @@ if not pl_data.empty:
         errors="coerce",
     )
 
-    pl_data = pl_data.dropna(
-        subset=["year"]
-    )
+    pl_data = pl_data.dropna(subset=["year"])
 
     pl_data["year"] = pl_data["year"].astype(int)
 
@@ -241,17 +231,12 @@ if not pl_data.empty:
             errors="coerce",
         )
 
-    pl_data = pl_data.sort_values(
-        "year"
-    ).tail(10)
+    pl_data = pl_data.sort_values("year").tail(10)
 
     revenue_profit_chart = go.Figure()
 
     # Add Revenue only when the column exists and has valid data.
-    if (
-        "sales" in pl_data.columns
-        and pl_data["sales"].notna().any()
-    ):
+    if "sales" in pl_data.columns and pl_data["sales"].notna().any():
         revenue_profit_chart.add_trace(
             go.Bar(
                 x=pl_data["year"],
@@ -261,10 +246,7 @@ if not pl_data.empty:
         )
 
     # Add Net Profit only when the column exists and has valid data.
-    if (
-        "net_profit" in pl_data.columns
-        and pl_data["net_profit"].notna().any()
-    ):
+    if "net_profit" in pl_data.columns and pl_data["net_profit"].notna().any():
         revenue_profit_chart.add_trace(
             go.Bar(
                 x=pl_data["year"],
@@ -288,22 +270,16 @@ if not pl_data.empty:
         )
 
     else:
-        st.info(
-            "Revenue and Net Profit data is not available."
-        )
+        st.info("Revenue and Net Profit data is not available.")
 
 else:
-    st.info(
-        "Profit and loss data is not available."
-    )
+    st.info("Profit and loss data is not available.")
 
 
 st.subheader("ROE and ROCE Trend")
 
 
-trend_data = ratios.sort_values(
-    "year"
-).tail(10).copy()
+trend_data = ratios.sort_values("year").tail(10).copy()
 
 
 trend_data["return_on_equity_pct"] = pd.to_numeric(
@@ -329,13 +305,13 @@ if roe_available and roce_available:
             y=trend_data["return_on_equity_pct"],
             mode="lines+markers",
             name="ROE",
-            line=dict(
-                color="#1f77b4",
-                width=2,
-            ),
-            marker=dict(
-                size=7,
-            ),
+            line={
+                "color": "#1f77b4",
+                "width": 2,
+            },
+            marker={
+                "size": 7,
+            },
         )
     )
 
@@ -346,39 +322,39 @@ if roe_available and roce_available:
             mode="lines+markers",
             name="ROCE",
             yaxis="y2",
-            line=dict(
-                color="#ff7f0e",
-                width=2,
-            ),
-            marker=dict(
-                size=7,
-            ),
+            line={
+                "color": "#ff7f0e",
+                "width": 2,
+            },
+            marker={
+                "size": 7,
+            },
         )
     )
 
     roe_roce_chart.update_layout(
         height=450,
-        xaxis=dict(
-            title="Year",
-        ),
-        yaxis=dict(
-            title="ROE (%)",
-            side="left",
-            showgrid=True,
-        ),
-        yaxis2=dict(
-            title="ROCE (%)",
-            side="right",
-            overlaying="y",
-            showgrid=False,
-        ),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-        ),
+        xaxis={
+            "title": "Year",
+        },
+        yaxis={
+            "title": "ROE (%)",
+            "side": "left",
+            "showgrid": True,
+        },
+        yaxis2={
+            "title": "ROCE (%)",
+            "side": "right",
+            "overlaying": "y",
+            "showgrid": False,
+        },
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
     )
 
     st.plotly_chart(
@@ -388,18 +364,13 @@ if roe_available and roce_available:
 
 else:
 
-    st.info(
-        "ROE and ROCE trend data is not available."
-    )
-
+    st.info("ROE and ROCE trend data is not available.")
 
 
 st.subheader("Pros and Cons")
 
 
-pros_cons = get_pros_and_cons(
-    selected_company
-)
+pros_cons = get_pros_and_cons(selected_company)
 
 
 if not pros_cons.empty:
@@ -418,15 +389,10 @@ if not pros_cons.empty:
 
                 pros_found = True
 
-                st.success(
-                    "✓ " + str(value).strip()
-                )
+                st.success("✓ " + str(value).strip())
 
         if not pros_found:
-            st.write(
-                "No pros available."
-            )
-
+            st.write("No pros available.")
 
     with col2:
 
@@ -440,17 +406,11 @@ if not pros_cons.empty:
 
                 cons_found = True
 
-                st.error(
-                    "✗ " + str(value).strip()
-                )
+                st.error("✗ " + str(value).strip())
 
         if not cons_found:
-            st.write(
-                "No cons available."
-            )
+            st.write("No cons available.")
 
 else:
 
-    st.info(
-        "Pros and cons are not available for this company."
-    )
+    st.info("Pros and cons are not available for this company.")

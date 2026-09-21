@@ -3,12 +3,11 @@ import plotly.express as px
 import streamlit as st
 
 from dashboard.utils.db import (
+    get_pl,
     get_ratios,
     get_sectors,
     get_valuation,
-    get_pl,
 )
-
 
 st.title("📊 Sector Analysis")
 
@@ -26,23 +25,13 @@ if sectors.empty:
     st.stop()
 
 
-sector_names = sorted(
-    sectors["broad_sector"]
-    .dropna()
-    .unique()
-    .tolist()
-)
+sector_names = sorted(sectors["broad_sector"].dropna().unique().tolist())
 
 
-selected_sector = st.selectbox(
-    "Select Sector",
-    sector_names
-)
+selected_sector = st.selectbox("Select Sector", sector_names)
 
 
-sector_companies = sectors[
-    sectors["broad_sector"] == selected_sector
-].copy()
+sector_companies = sectors[sectors["broad_sector"] == selected_sector].copy()
 
 
 if sector_companies.empty:
@@ -68,28 +57,19 @@ for _, company in sector_companies.iterrows():
 
         ratios = ratios.copy()
 
-        ratios["year"] = pd.to_numeric(
-            ratios["year"],
-            errors="coerce"
-        )
+        ratios["year"] = pd.to_numeric(ratios["year"], errors="coerce")
 
-        ratios = ratios.dropna(
-            subset=["year"]
-        )
+        ratios = ratios.dropna(subset=["year"])
 
         if not ratios.empty:
 
             latest_year = ratios["year"].max()
 
-            latest_ratio = ratios[
-                ratios["year"] == latest_year
-            ]
+            latest_ratio = ratios[ratios["year"] == latest_year]
 
             if not latest_ratio.empty:
 
-                roe = latest_ratio.iloc[0].get(
-                    "return_on_equity_pct"
-                )
+                roe = latest_ratio.iloc[0].get("return_on_equity_pct")
 
     # Get latest available Revenue
     profit_loss = get_pl(company_name)
@@ -98,28 +78,19 @@ for _, company in sector_companies.iterrows():
 
         profit_loss = profit_loss.copy()
 
-        profit_loss["year"] = pd.to_numeric(
-            profit_loss["year"],
-            errors="coerce"
-        )
+        profit_loss["year"] = pd.to_numeric(profit_loss["year"], errors="coerce")
 
-        profit_loss = profit_loss.dropna(
-            subset=["year"]
-        )
+        profit_loss = profit_loss.dropna(subset=["year"])
 
         if not profit_loss.empty:
 
             latest_year = profit_loss["year"].max()
 
-            latest_pl = profit_loss[
-                profit_loss["year"] == latest_year
-            ]
+            latest_pl = profit_loss[profit_loss["year"] == latest_year]
 
             if not latest_pl.empty:
 
-                revenue = latest_pl.iloc[0].get(
-                    "sales"
-                )
+                revenue = latest_pl.iloc[0].get("sales")
 
     # Get latest available Market Cap
     valuation = get_valuation(company_name)
@@ -128,28 +99,19 @@ for _, company in sector_companies.iterrows():
 
         valuation = valuation.copy()
 
-        valuation["year"] = pd.to_numeric(
-            valuation["year"],
-            errors="coerce"
-        )
+        valuation["year"] = pd.to_numeric(valuation["year"], errors="coerce")
 
-        valuation = valuation.dropna(
-            subset=["year"]
-        )
+        valuation = valuation.dropna(subset=["year"])
 
         if not valuation.empty:
 
             latest_year = valuation["year"].max()
 
-            latest_valuation = valuation[
-                valuation["year"] == latest_year
-            ]
+            latest_valuation = valuation[valuation["year"] == latest_year]
 
             if not latest_valuation.empty:
 
-                market_cap = latest_valuation.iloc[0].get(
-                    "market_cap_crore"
-                )
+                market_cap = latest_valuation.iloc[0].get("market_cap_crore")
 
     rows.append(
         {
@@ -166,29 +128,18 @@ sector_df = pd.DataFrame(rows)
 
 
 # Convert all numeric columns safely
-sector_df["Revenue"] = pd.to_numeric(
-    sector_df["Revenue"],
-    errors="coerce"
-)
+sector_df["Revenue"] = pd.to_numeric(sector_df["Revenue"], errors="coerce")
 
-sector_df["ROE"] = pd.to_numeric(
-    sector_df["ROE"],
-    errors="coerce"
-)
+sector_df["ROE"] = pd.to_numeric(sector_df["ROE"], errors="coerce")
 
-sector_df["Market Cap"] = pd.to_numeric(
-    sector_df["Market Cap"],
-    errors="coerce"
-)
+sector_df["Market Cap"] = pd.to_numeric(sector_df["Market Cap"], errors="coerce")
 
 
 # ---------------------------------------------------------
 # Company Bubble Chart
 # ---------------------------------------------------------
 
-st.subheader(
-    f"{selected_sector} Company Comparison"
-)
+st.subheader(f"{selected_sector} Company Comparison")
 
 
 chart_df = sector_df.dropna(
@@ -202,10 +153,7 @@ chart_df = sector_df.dropna(
 
 if chart_df.empty:
 
-    st.info(
-        "There is not enough complete data to display "
-        "the sector bubble chart."
-    )
+    st.info("There is not enough complete data to display " "the sector bubble chart.")
 
 else:
 
@@ -225,13 +173,13 @@ else:
     )
 
     fig.update_traces(
-        marker=dict(
-            opacity=0.75,
-            line=dict(
-                width=1,
-                color="white",
-            ),
-        )
+        marker={
+            "opacity": 0.75,
+            "line": {
+                "width": 1,
+                "color": "white",
+            },
+        }
     )
 
     fig.update_layout(
@@ -240,12 +188,12 @@ else:
         height=600,
         xaxis_title="Revenue (Cr)",
         yaxis_title="ROE (%)",
-        margin=dict(
-            l=50,
-            r=30,
-            t=70,
-            b=50,
-        ),
+        margin={
+            "l": 50,
+            "r": 30,
+            "t": 70,
+            "b": 50,
+        },
     )
 
     st.plotly_chart(
@@ -258,9 +206,7 @@ else:
 # Sector Median KPI Bar Charts
 # ---------------------------------------------------------
 
-st.subheader(
-    f"{selected_sector} Median KPIs"
-)
+st.subheader(f"{selected_sector} Median KPIs")
 
 
 median_revenue = sector_df["Revenue"].median()
@@ -307,12 +253,12 @@ with median_col1:
             showlegend=False,
             xaxis_title="",
             yaxis_title="₹ Crore",
-            margin=dict(
-                l=20,
-                r=20,
-                t=60,
-                b=30,
-            ),
+            margin={
+                "l": 20,
+                "r": 20,
+                "t": 60,
+                "b": 30,
+            },
         )
 
         st.plotly_chart(
@@ -357,12 +303,12 @@ with median_col2:
             showlegend=False,
             xaxis_title="",
             yaxis_title="Percent",
-            margin=dict(
-                l=20,
-                r=20,
-                t=60,
-                b=30,
-            ),
+            margin={
+                "l": 20,
+                "r": 20,
+                "t": 60,
+                "b": 30,
+            },
         )
 
         st.plotly_chart(
@@ -407,12 +353,12 @@ with median_col3:
             showlegend=False,
             xaxis_title="",
             yaxis_title="₹ Crore",
-            margin=dict(
-                l=20,
-                r=20,
-                t=60,
-                b=30,
-            ),
+            margin={
+                "l": 20,
+                "r": 20,
+                "t": 60,
+                "b": 30,
+            },
         )
 
         st.plotly_chart(
@@ -425,9 +371,7 @@ with median_col3:
 # Companies Table
 # ---------------------------------------------------------
 
-st.subheader(
-    "Companies in Selected Sector"
-)
+st.subheader("Companies in Selected Sector")
 
 
 display_df = sector_df[
@@ -450,19 +394,13 @@ display_df = display_df.rename(
 )
 
 
-display_df["Revenue (Cr)"] = display_df[
-    "Revenue (Cr)"
-].round(2)
+display_df["Revenue (Cr)"] = display_df["Revenue (Cr)"].round(2)
 
 
-display_df["ROE (%)"] = display_df[
-    "ROE (%)"
-].round(2)
+display_df["ROE (%)"] = display_df["ROE (%)"].round(2)
 
 
-display_df["Market Cap (Cr)"] = display_df[
-    "Market Cap (Cr)"
-].round(2)
+display_df["Market Cap (Cr)"] = display_df["Market Cap (Cr)"].round(2)
 
 
 # Show N/A instead of blank/NaN values

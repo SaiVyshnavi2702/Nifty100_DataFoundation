@@ -20,6 +20,8 @@ htmlcov/
 
 # Generated output
 output/*
+!output/final_deliverables/
+!output/final_deliverables/*
 
 # Jupyter
 .ipynb_checkpoints/

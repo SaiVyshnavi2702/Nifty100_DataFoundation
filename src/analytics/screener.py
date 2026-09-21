@@ -1,6 +1,5 @@
 import sqlite3
 
-
 DB_PATH = "data/nifty100.db"
 
 
@@ -115,20 +114,13 @@ def screen_latest_companies(db_path=DB_PATH):
                 "year": row["year"],
                 "period": row["period"],
                 "status": result,
-                "return_on_equity_pct":
-                    row["return_on_equity_pct"],
-                "debt_to_equity":
-                    row["debt_to_equity"],
-                "interest_coverage":
-                    row["interest_coverage"],
-                "revenue_cagr_5yr":
-                    row["revenue_cagr_5yr"],
-                "pat_cagr_5yr":
-                    row["pat_cagr_5yr"],
-                "eps_cagr_5yr":
-                    row["eps_cagr_5yr"],
-                "composite_quality_score":
-                    row["composite_quality_score"],
+                "return_on_equity_pct": row["return_on_equity_pct"],
+                "debt_to_equity": row["debt_to_equity"],
+                "interest_coverage": row["interest_coverage"],
+                "revenue_cagr_5yr": row["revenue_cagr_5yr"],
+                "pat_cagr_5yr": row["pat_cagr_5yr"],
+                "eps_cagr_5yr": row["eps_cagr_5yr"],
+                "composite_quality_score": row["composite_quality_score"],
             }
         )
 
@@ -142,20 +134,11 @@ def print_screening_results(results):
     Print a readable Day 14 screening report.
     """
 
-    passed = [
-        row for row in results
-        if row["status"] == "PASS"
-    ]
+    passed = [row for row in results if row["status"] == "PASS"]
 
-    failed = [
-        row for row in results
-        if row["status"] == "FAIL"
-    ]
+    failed = [row for row in results if row["status"] == "FAIL"]
 
-    insufficient = [
-        row for row in results
-        if row["status"] == "INSUFFICIENT_DATA"
-    ]
+    insufficient = [row for row in results if row["status"] == "INSUFFICIENT_DATA"]
 
     print()
     print("=" * 70)
@@ -174,10 +157,7 @@ def print_screening_results(results):
     print("-" * 70)
 
     for row in passed:
-        print(
-            f"{row['company_id']:15} "
-            f"Score: {row['composite_quality_score']}"
-        )
+        print(f"{row['company_id']:15} " f"Score: {row['composite_quality_score']}")
 
     print()
     print("-" * 70)

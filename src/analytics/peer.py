@@ -6,25 +6,18 @@ the required financial metrics within each peer group and year,
 and store the results in SQLite.
 """
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import pandas as pd
 
 from src.analytics.ratios import return_on_capital_employed
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DB_PATH = PROJECT_ROOT / "data" / "nifty100.db"
 
-PEER_GROUPS_FILE = (
-    PROJECT_ROOT
-    / "data"
-    / "raw"
-    / "supporting"
-    / "peer_groups.xlsx"
-)
+PEER_GROUPS_FILE = PROJECT_ROOT / "data" / "raw" / "supporting" / "peer_groups.xlsx"
 
 
 METRICS = {
@@ -47,9 +40,7 @@ def load_peer_groups():
     """
 
     if not PEER_GROUPS_FILE.exists():
-        raise FileNotFoundError(
-            f"Peer group file not found: {PEER_GROUPS_FILE}"
-        )
+        raise FileNotFoundError(f"Peer group file not found: {PEER_GROUPS_FILE}")
 
     peer_groups = pd.read_excel(PEER_GROUPS_FILE)
 
@@ -66,25 +57,16 @@ def load_peer_groups():
             + ", ".join(sorted(missing_columns))
         )
 
-    peer_groups = peer_groups[
-        ["company_id", "peer_group_name"]
-    ].copy()
+    peer_groups = peer_groups[["company_id", "peer_group_name"]].copy()
 
-    peer_groups["company_id"] = (
-        peer_groups["company_id"]
-        .astype(str)
-        .str.strip()
-    )
+    peer_groups["company_id"] = peer_groups["company_id"].astype(str).str.strip()
 
     peer_groups["peer_group_name"] = (
-        peer_groups["peer_group_name"]
-        .astype(str)
-        .str.strip()
+        peer_groups["peer_group_name"].astype(str).str.strip()
     )
 
     peer_groups = peer_groups[
-        (peer_groups["company_id"] != "")
-        & (peer_groups["peer_group_name"] != "")
+        (peer_groups["company_id"] != "") & (peer_groups["peer_group_name"] != "")
     ]
 
     duplicate_companies = (
@@ -122,23 +104,13 @@ def report_companies_without_peer_group(conn, peer_groups):
         conn,
     )
 
-    companies["company_id"] = (
-        companies["company_id"]
-        .astype(str)
-        .str.strip()
-    )
+    companies["company_id"] = companies["company_id"].astype(str).str.strip()
 
-    assigned_companies = set(
-        peer_groups["company_id"]
-    )
+    assigned_companies = set(peer_groups["company_id"])
 
-    database_companies = set(
-        companies["company_id"]
-    )
+    database_companies = set(companies["company_id"])
 
-    unassigned_companies = sorted(
-        database_companies - assigned_companies
-    )
+    unassigned_companies = sorted(database_companies - assigned_companies)
 
     if unassigned_companies:
         print("No peer group assigned")
@@ -206,9 +178,7 @@ def load_financial_data(conn):
     )
 
     if financial_data.empty:
-        raise ValueError(
-            "No financial data found in financial_ratios."
-        )
+        raise ValueError("No financial data found in financial_ratios.")
 
     financial_data["roce_percentage"] = financial_data.apply(
         lambda row: return_on_capital_employed(
@@ -232,19 +202,11 @@ def build_peer_metric_data(financial_data, peer_groups):
 
     financial_data = financial_data.copy()
 
-    financial_data["company_id"] = (
-        financial_data["company_id"]
-        .astype(str)
-        .str.strip()
-    )
+    financial_data["company_id"] = financial_data["company_id"].astype(str).str.strip()
 
     peer_groups = peer_groups.copy()
 
-    peer_groups["company_id"] = (
-        peer_groups["company_id"]
-        .astype(str)
-        .str.strip()
-    )
+    peer_groups["company_id"] = peer_groups["company_id"].astype(str).str.strip()
 
     merged = financial_data.merge(
         peer_groups,
@@ -253,18 +215,14 @@ def build_peer_metric_data(financial_data, peer_groups):
     )
 
     if merged.empty:
-        raise ValueError(
-            "No financial records could be matched to peer groups."
-        )
+        raise ValueError("No financial records could be matched to peer groups.")
 
     metric_rows = []
 
     for metric_name, column_name in METRICS.items():
 
         if column_name not in merged.columns:
-            raise ValueError(
-                f"Required metric column is missing: {column_name}"
-            )
+            raise ValueError(f"Required metric column is missing: {column_name}")
 
         current = merged[
             [
@@ -275,11 +233,7 @@ def build_peer_metric_data(financial_data, peer_groups):
             ]
         ].copy()
 
-        current = current.rename(
-            columns={
-                column_name: "value"
-            }
-        )
+        current = current.rename(columns={column_name: "value"})
 
         current["metric"] = metric_name
 
@@ -342,18 +296,12 @@ def calculate_percent_rank(values):
         result.loc[valid] = 0.0
         return result
 
-    ranks = (
-        values.loc[valid]
-        .rank(
-            method="min",
-            ascending=True,
-        )
+    ranks = values.loc[valid].rank(
+        method="min",
+        ascending=True,
     )
 
-    result.loc[valid] = (
-        (ranks - 1)
-        / (valid_count - 1)
-    )
+    result.loc[valid] = (ranks - 1) / (valid_count - 1)
 
     return result
 
@@ -386,19 +334,14 @@ def calculate_peer_percentiles(metric_data):
 
     for group_key, group in grouped:
 
-        percentiles = calculate_percent_rank(
-            group["value"]
-        )
+        percentiles = calculate_percent_rank(group["value"])
 
         metric_name = group["metric"].iloc[0]
 
         if metric_name == "D/E":
             valid = percentiles.notna()
 
-            percentiles.loc[valid] = (
-                1.0
-                - percentiles.loc[valid].astype(float)
-            )
+            percentiles.loc[valid] = 1.0 - percentiles.loc[valid].astype(float)
 
         metric_data.loc[
             group.index,
@@ -427,12 +370,9 @@ def create_peer_percentiles_table(conn):
     Create the SQLite table required by Day 18.
     """
 
-    conn.execute(
-        "DROP TABLE IF EXISTS peer_percentiles"
-    )
+    conn.execute("DROP TABLE IF EXISTS peer_percentiles")
 
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE peer_percentiles (
             company_id TEXT NOT NULL,
             peer_group_name TEXT NOT NULL,
@@ -441,8 +381,7 @@ def create_peer_percentiles_table(conn):
             percentile_rank REAL,
             year INTEGER NOT NULL
         )
-        """
-    )
+        """)
 
     conn.commit()
 
@@ -470,25 +409,18 @@ def validate_peer_percentiles(conn):
     print()
     print("Running Day 18 validation...")
 
-    table_exists = conn.execute(
-        """
+    table_exists = conn.execute("""
         SELECT COUNT(*)
         FROM sqlite_master
         WHERE type = 'table'
           AND name = 'peer_percentiles'
-        """
-    ).fetchone()[0]
+        """).fetchone()[0]
 
     if table_exists != 1:
-        raise AssertionError(
-            "peer_percentiles table was not created."
-        )
+        raise AssertionError("peer_percentiles table was not created.")
 
     actual_columns = [
-        row[1]
-        for row in conn.execute(
-            "PRAGMA table_info(peer_percentiles)"
-        ).fetchall()
+        row[1] for row in conn.execute("PRAGMA table_info(peer_percentiles)").fetchall()
     ]
 
     required_columns = [
@@ -507,27 +439,18 @@ def validate_peer_percentiles(conn):
             f"Actual:   {actual_columns}"
         )
 
-    metric_count = conn.execute(
-        """
+    metric_count = conn.execute("""
         SELECT COUNT(DISTINCT metric)
         FROM peer_percentiles
-        """
-    ).fetchone()[0]
+        """).fetchone()[0]
 
     if metric_count != 10:
-        raise AssertionError(
-            f"Expected 10 metrics, found {metric_count}."
-        )
+        raise AssertionError(f"Expected 10 metrics, found {metric_count}.")
 
-    database_metrics = {
-        row[0]
-        for row in conn.execute(
-            """
+    database_metrics = {row[0] for row in conn.execute("""
             SELECT DISTINCT metric
             FROM peer_percentiles
-            """
-        ).fetchall()
-    }
+            """).fetchall()}
 
     expected_metrics = set(METRICS.keys())
 
@@ -538,20 +461,15 @@ def validate_peer_percentiles(conn):
             f"Actual:   {sorted(database_metrics)}"
         )
 
-    peer_group_count = conn.execute(
-        """
+    peer_group_count = conn.execute("""
         SELECT COUNT(DISTINCT peer_group_name)
         FROM peer_percentiles
-        """
-    ).fetchone()[0]
+        """).fetchone()[0]
 
     if peer_group_count != 11:
-        raise AssertionError(
-            f"Expected 11 peer groups, found {peer_group_count}."
-        )
+        raise AssertionError(f"Expected 11 peer groups, found {peer_group_count}.")
 
-    invalid_percentiles = conn.execute(
-        """
+    invalid_percentiles = conn.execute("""
         SELECT COUNT(*)
         FROM peer_percentiles
         WHERE percentile_rank IS NOT NULL
@@ -559,8 +477,7 @@ def validate_peer_percentiles(conn):
               percentile_rank < 0
               OR percentile_rank > 1
           )
-        """
-    ).fetchone()[0]
+        """).fetchone()[0]
 
     if invalid_percentiles:
         raise AssertionError(
@@ -568,8 +485,7 @@ def validate_peer_percentiles(conn):
             "outside the 0 to 1 range."
         )
 
-    duplicate_count = conn.execute(
-        """
+    duplicate_count = conn.execute("""
         SELECT COUNT(*)
         FROM (
             SELECT
@@ -585,8 +501,7 @@ def validate_peer_percentiles(conn):
                 year
             HAVING COUNT(*) > 1
         )
-        """
-    ).fetchone()[0]
+        """).fetchone()[0]
 
     if duplicate_count:
         raise AssertionError(
@@ -594,35 +509,26 @@ def validate_peer_percentiles(conn):
             "company/group/metric/year combinations."
         )
 
-    total_rows = conn.execute(
-        """
+    total_rows = conn.execute("""
         SELECT COUNT(*)
         FROM peer_percentiles
-        """
-    ).fetchone()[0]
+        """).fetchone()[0]
 
     if total_rows == 0:
-        raise AssertionError(
-            "peer_percentiles contains no rows."
-        )
+        raise AssertionError("peer_percentiles contains no rows.")
 
-    percentile_range = conn.execute(
-        """
+    percentile_range = conn.execute("""
         SELECT
             MIN(percentile_rank),
             MAX(percentile_rank)
         FROM peer_percentiles
-        """
-    ).fetchone()
+        """).fetchone()
 
     print("Validation passed.")
     print(f"Total rows: {total_rows}")
     print(f"Metrics: {metric_count}")
     print(f"Peer groups: {peer_group_count}")
-    print(
-        "Percentile range: "
-        f"{percentile_range[0]} to {percentile_range[1]}"
-    )
+    print("Percentile range: " f"{percentile_range[0]} to {percentile_range[1]}")
 
 
 def main():
@@ -638,25 +544,14 @@ def main():
 
     peer_groups = load_peer_groups()
 
-    print(
-        f"Peer-group assignments loaded: "
-        f"{len(peer_groups)}"
-    )
+    print(f"Peer-group assignments loaded: " f"{len(peer_groups)}")
 
-    peer_group_count = (
-        peer_groups["peer_group_name"]
-        .nunique()
-    )
+    peer_group_count = peer_groups["peer_group_name"].nunique()
 
-    print(
-        f"Peer groups found: "
-        f"{peer_group_count}"
-    )
+    print(f"Peer groups found: " f"{peer_group_count}")
 
     if peer_group_count != 11:
-        raise ValueError(
-            "Expected 11 peer groups in peer_groups.xlsx."
-        )
+        raise ValueError("Expected 11 peer groups in peer_groups.xlsx.")
 
     print()
     print("Opening database...")
@@ -675,14 +570,9 @@ def main():
         print()
         print("Loading financial data...")
 
-        financial_data = load_financial_data(
-            conn
-        )
+        financial_data = load_financial_data(conn)
 
-        print(
-            f"Financial rows loaded: "
-            f"{len(financial_data)}"
-        )
+        print(f"Financial rows loaded: " f"{len(financial_data)}")
 
         print()
         print("Preparing Day 18 metrics...")
@@ -692,29 +582,19 @@ def main():
             peer_groups,
         )
 
-        print(
-            f"Metric rows prepared: "
-            f"{len(metric_data)}"
-        )
+        print(f"Metric rows prepared: " f"{len(metric_data)}")
 
         print()
         print("Calculating peer percentile rankings...")
 
-        results = calculate_peer_percentiles(
-            metric_data
-        )
+        results = calculate_peer_percentiles(metric_data)
 
-        print(
-            f"Percentile rows calculated: "
-            f"{len(results)}"
-        )
+        print(f"Percentile rows calculated: " f"{len(results)}")
 
         print()
         print("Creating peer_percentiles table...")
 
-        create_peer_percentiles_table(
-            conn
-        )
+        create_peer_percentiles_table(conn)
 
         print("Saving percentile rankings...")
 
@@ -723,9 +603,7 @@ def main():
             results,
         )
 
-        validate_peer_percentiles(
-            conn
-        )
+        validate_peer_percentiles(conn)
 
         print()
         print("Day 18 completed successfully.")

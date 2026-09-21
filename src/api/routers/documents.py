@@ -6,34 +6,54 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
 
+
 BASE_DIR = Path(__file__).resolve().parents[3]
+
 DB_PATH = BASE_DIR / "data" / "nifty100.db"
 
+
 def is_valid_url(url):
+    """Check whether valid url."""
     if not url:
+
         return False
 
     try:
+
         parsed = urlparse(url)
+
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
-    except Exception:
+
+    except Exception:  # noqa: BLE001
+
         return False
 
 
 @router.get("/companies/{ticker}/documents")
 def get_company_documents(ticker: str):
+    """Retrieve company documents."""
     conn = sqlite3.connect(DB_PATH)
+
     conn.row_factory = sqlite3.Row
 
     query = """
+
         SELECT
+
             company_id,
+
             year,
+
             period,
+
             annual_report
+
         FROM documents
+
         WHERE UPPER(company_id) = UPPER(?)
+
         ORDER BY year DESC
+
     """
 
     rows = conn.execute(query, (ticker,)).fetchall()
@@ -41,6 +61,7 @@ def get_company_documents(ticker: str):
     conn.close()
 
     if not rows:
+
         raise HTTPException(
             status_code=404,
             detail="Company documents not found",
@@ -49,6 +70,7 @@ def get_company_documents(ticker: str):
     documents = []
 
     for row in rows:
+
         documents.append(
             {
                 "company_id": row["company_id"],
@@ -59,6 +81,4 @@ def get_company_documents(ticker: str):
             }
         )
 
-    return documents    
-
-
+    return documents

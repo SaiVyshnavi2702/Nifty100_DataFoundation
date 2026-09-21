@@ -1,11 +1,7 @@
-from src.etl.normaliser import (
-    normalize_year,
-    normalize_ticker
-)
-
-
+from src.etl.normaliser import normalize_ticker, normalize_year
 
 # normalize_year tests
+
 
 def test_normalize_year_dec_2012():
     assert normalize_year("Dec 2012") == 2012
@@ -85,7 +81,6 @@ def test_normalize_year_empty_string():
 
 def test_normalize_year_invalid_text():
     assert normalize_year("unknown") is None
-
 
 
 # normalize_ticker tests

@@ -1,4 +1,3 @@
-
 """
 Day 34 - Sector Report Generation
 
@@ -10,24 +9,22 @@ Each sector report contains:
 3. Eight company-level metrics
 """
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import pandas as pd
-
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
-    SimpleDocTemplate,
     Paragraph,
+    SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
 )
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -48,9 +45,7 @@ def calculate_cagr(start_value, end_value, years):
     if start_value <= 0 or end_value <= 0:
         return None
 
-    return (
-        (end_value / start_value) ** (1 / years) - 1
-    ) * 100
+    return ((end_value / start_value) ** (1 / years) - 1) * 100
 
 
 def calculate_financial_cagr(pnl_df):
@@ -65,7 +60,6 @@ def calculate_financial_cagr(pnl_df):
     profit_growth = {}
 
     for ticker, group in pnl_df.groupby("company_id"):
-
         group = group.copy()
 
         group["year"] = pd.to_numeric(
@@ -83,20 +77,13 @@ def calculate_financial_cagr(pnl_df):
             errors="coerce",
         )
 
-        group = group.dropna(
-            subset=["year"]
-        ).sort_values("year")
+        group = group.dropna(subset=["year"]).sort_values("year")
 
-        # -------------------------
         # Sales CAGR
-        # -------------------------
 
-        sales_data = group.dropna(
-            subset=["sales"]
-        )
+        sales_data = group.dropna(subset=["sales"])
 
         if len(sales_data) >= 2:
-
             first = sales_data.iloc[0]
             last = sales_data.iloc[-1]
 
@@ -109,16 +96,11 @@ def calculate_financial_cagr(pnl_df):
         else:
             sales_growth[ticker] = None
 
-        
         # Profit CAGR
-        
 
-        profit_data = group.dropna(
-            subset=["net_profit"]
-        )
+        profit_data = group.dropna(subset=["net_profit"])
 
         if len(profit_data) >= 2:
-
             first = profit_data.iloc[0]
             last = profit_data.iloc[-1]
 
@@ -155,7 +137,6 @@ def calculate_stock_cagr(stock_df):
     )
 
     for ticker, group in stock_df.groupby("company_id"):
-
         group = group.dropna(
             subset=[
                 "date",
@@ -170,9 +151,7 @@ def calculate_stock_cagr(stock_df):
         first = group.iloc[0]
         last = group.iloc[-1]
 
-        days = (
-            last["date"] - first["date"]
-        ).days
+        days = (last["date"] - first["date"]).days
 
         years = days / 365.25
 
@@ -189,10 +168,7 @@ def get_sector_data():
     """Load company, sector and financial metrics from the database."""
 
     with sqlite3.connect(DB_PATH) as connection:
-
-        
         # Company + sector + latest financial ratio data
-        
 
         query = """
             SELECT
@@ -235,7 +211,6 @@ def get_sector_data():
         )
 
         # Historical Profit & Loss data
-        
 
         pnl_query = """
             SELECT
@@ -255,7 +230,6 @@ def get_sector_data():
         )
 
         # Historical stock price data
-        
 
         stock_query = """
             SELECT
@@ -274,29 +248,18 @@ def get_sector_data():
         )
 
     # Calculate financial growth metrics
-    
 
-    sales_growth, profit_growth = calculate_financial_cagr(
-        pnl
-    )
+    sales_growth, profit_growth = calculate_financial_cagr(pnl)
 
-    df["sales_growth"] = df["ticker"].map(
-        sales_growth
-    )
+    df["sales_growth"] = df["ticker"].map(sales_growth)
 
-    df["profit_growth"] = df["ticker"].map(
-        profit_growth
-    )
+    df["profit_growth"] = df["ticker"].map(profit_growth)
 
     # Calculate Stock CAGR
 
-    stock_cagr = calculate_stock_cagr(
-        stock
-    )
+    stock_cagr = calculate_stock_cagr(stock)
 
-    df["stock_cagr"] = df["ticker"].map(
-        stock_cagr
-    )
+    df["stock_cagr"] = df["ticker"].map(stock_cagr)
 
     return df
 
@@ -311,7 +274,6 @@ def format_number(value, suffix=""):
         return f"{float(value):,.2f}{suffix}"
 
     except (ValueError, TypeError):
-
         text = str(value).strip()
 
         if ":" in text:
@@ -418,7 +380,6 @@ def build_sector_summary(df, styles):
     ]
 
     for label, column, suffix in metrics:
-
         numeric_values = pd.to_numeric(
             df[column],
             errors="coerce",
@@ -535,7 +496,6 @@ def build_company_table(df, styles):
     ]
 
     for _, row in df.iterrows():
-
         company_name = row["company_name"]
 
         if pd.isna(company_name):
@@ -679,17 +639,10 @@ def generate_sector_report(sector_name, sector_df):
     )
 
     safe_name = (
-        str(sector_name)
-        .strip()
-        .replace("/", "_")
-        .replace("\\", "_")
-        .replace(" ", "_")
+        str(sector_name).strip().replace("/", "_").replace("\\", "_").replace(" ", "_")
     )
 
-    output_file = (
-        OUTPUT_DIR
-        / f"{safe_name}_report.pdf"
-    )
+    output_file = OUTPUT_DIR / f"{safe_name}_report.pdf"
 
     styles = build_styles()
 
@@ -763,30 +716,18 @@ def generate_all_sector_reports():
     """Generate reports for all broad sectors."""
 
     if not DB_PATH.exists():
-        raise FileNotFoundError(
-            f"Database not found: {DB_PATH}"
-        )
+        raise FileNotFoundError(f"Database not found: {DB_PATH}")
 
     df = get_sector_data()
 
     if df.empty:
-        raise ValueError(
-            "No sector data found in the database."
-        )
+        raise ValueError("No sector data found in the database.")
 
-    sectors = (
-        df["sector"]
-        .dropna()
-        .astype(str)
-        .str.strip()
-        .unique()
-    )
+    sectors = df["sector"].dropna().astype(str).str.strip().unique()
 
     sectors = sorted(sectors)
 
-    print(
-        f"Total sectors found: {len(sectors)}"
-    )
+    print(f"Total sectors found: {len(sectors)}")
 
     print()
 
@@ -796,18 +737,11 @@ def generate_all_sector_reports():
         sectors,
         start=1,
     ):
+        sector_df = df[df["sector"] == sector_name].copy()
 
-        sector_df = df[
-            df["sector"] == sector_name
-        ].copy()
-
-        print(
-            f"[{index}/{len(sectors)}] "
-            f"Generating {sector_name}..."
-        )
+        print(f"[{index}/{len(sectors)}] " f"Generating {sector_name}...")
 
         try:
-
             output_file = generate_sector_report(
                 sector_name,
                 sector_df,
@@ -815,27 +749,16 @@ def generate_all_sector_reports():
 
             generated += 1
 
-            print(
-                f"  CREATED - {output_file.name}"
-            )
+            print(f"  CREATED - {output_file.name}")
 
-        except Exception as error:
-
-            print(
-                f"  ERROR - {error}"
-            )
+        except Exception as error:  # noqa: BLE001
+            print(f"  ERROR - {error}")
 
     print()
     print("Sector report generation completed.")
-    print(
-        f"Total sectors: {len(sectors)}"
-    )
-    print(
-        f"Generated reports: {generated}"
-    )
-    print(
-        f"Output directory: {OUTPUT_DIR}"
-    )
+    print(f"Total sectors: {len(sectors)}")
+    print(f"Generated reports: {generated}")
+    print(f"Output directory: {OUTPUT_DIR}")
 
 
 def main():
@@ -846,4 +769,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

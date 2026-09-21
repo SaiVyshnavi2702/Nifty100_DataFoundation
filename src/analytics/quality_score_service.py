@@ -5,7 +5,6 @@ from src.analytics.quality_score import (
     calculate_composite_quality_score,
 )
 
-
 DB_PATH = "data/nifty100.db"
 
 
@@ -20,14 +19,12 @@ def update_quality_scores(
 
     connection = sqlite3.connect(db_path)
 
-    companies = connection.execute(
-        """
+    companies = connection.execute("""
         SELECT DISTINCT company_id
         FROM profitandloss
         WHERE typeof(year) = 'integer'
         ORDER BY company_id
-        """
-    ).fetchall()
+        """).fetchall()
 
     updated_rows = 0
     insufficient_rows = 0
@@ -53,24 +50,16 @@ def update_quality_scores(
                 db_path=db_path,
             )
 
-            revenue_cagr_5yr = cagrs["revenue"].get(
-                "cagr_5yr"
-            )
+            revenue_cagr_5yr = cagrs["revenue"].get("cagr_5yr")
 
-            pat_cagr_5yr = cagrs["pat"].get(
-                "cagr_5yr"
-            )
+            pat_cagr_5yr = cagrs["pat"].get("cagr_5yr")
 
-            eps_cagr_5yr = cagrs["eps"].get(
-                "cagr_5yr"
-            )
+            eps_cagr_5yr = cagrs["eps"].get("cagr_5yr")
 
-            composite_score = (
-                calculate_composite_quality_score(
-                    revenue_cagr_5yr,
-                    pat_cagr_5yr,
-                    eps_cagr_5yr,
-                )
+            composite_score = calculate_composite_quality_score(
+                revenue_cagr_5yr,
+                pat_cagr_5yr,
+                eps_cagr_5yr,
             )
 
             if composite_score is None:
@@ -102,9 +91,7 @@ def update_quality_scores(
     connection.commit()
     connection.close()
 
-    print(
-        "Quality-score update completed."
-    )
+    print("Quality-score update completed.")
 
     print(
         "Rows with calculated score:",

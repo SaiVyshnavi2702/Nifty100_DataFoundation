@@ -1,7 +1,8 @@
 ﻿import sqlite3
+
 import pandas as pd
 
-from src.screener.engine import load_data, DB_PATH
+from src.screener.engine import DB_PATH, load_data
 
 
 def _get_92_company_universe():
@@ -11,9 +12,7 @@ def _get_92_company_universe():
     """
     connection = sqlite3.connect(DB_PATH)
 
-    rows = connection.execute(
-        "SELECT DISTINCT company_id FROM sectors"
-    ).fetchall()
+    rows = connection.execute("SELECT DISTINCT company_id FROM sectors").fetchall()
 
     connection.close()
 
@@ -30,25 +29,13 @@ def _latest_per_company(df):
 
     universe = _get_92_company_universe()
 
-    result = result[
-        result["company_id"].isin(universe)
-    ].copy()
+    result = result[result["company_id"].isin(universe)].copy()
 
-    result["_year_sort"] = pd.to_numeric(
-        result["year"],
-        errors="coerce"
-    )
+    result["_year_sort"] = pd.to_numeric(result["year"], errors="coerce")
 
     result = (
-        result
-        .sort_values(
-            ["company_id", "_year_sort"],
-            ascending=[True, False]
-        )
-        .drop_duplicates(
-            "company_id",
-            keep="first"
-        )
+        result.sort_values(["company_id", "_year_sort"], ascending=[True, False])
+        .drop_duplicates("company_id", keep="first")
         .drop(columns="_year_sort")
         .reset_index(drop=True)
     )
@@ -61,10 +48,7 @@ def _strict_min(df, column, threshold):
     Keep non-null values strictly greater than threshold.
     """
 
-    return df[
-        df[column].notna()
-        & (df[column] > threshold)
-    ].copy()
+    return df[df[column].notna() & (df[column] > threshold)].copy()
 
 
 def _strict_max(df, column, threshold):
@@ -72,10 +56,7 @@ def _strict_max(df, column, threshold):
     Keep non-null values strictly less than threshold.
     """
 
-    return df[
-        df[column].notna()
-        & (df[column] < threshold)
-    ].copy()
+    return df[df[column].notna() & (df[column] < threshold)].copy()
 
 
 def _de_max_excluding_financials(df, threshold):
@@ -104,11 +85,7 @@ def _de_max_excluding_financials(df, threshold):
     )
 
     return df[
-        financials
-        | (
-            df["debt_to_equity"].notna()
-            & (df["debt_to_equity"] < threshold)
-        )
+        financials | (df["debt_to_equity"].notna() & (df["debt_to_equity"] < threshold))
     ].copy()
 
 
@@ -120,14 +97,9 @@ def _sort(df):
     if "composite_quality_score" not in df.columns:
         return df.reset_index(drop=True)
 
-    return (
-        df.sort_values(
-            by="composite_quality_score",
-            ascending=False,
-            na_position="last"
-        )
-        .reset_index(drop=True)
-    )
+    return df.sort_values(
+        by="composite_quality_score", ascending=False, na_position="last"
+    ).reset_index(drop=True)
 
 
 def quality_compounder(df):
@@ -143,28 +115,13 @@ def quality_compounder(df):
 
     result = _latest_per_company(df)
 
-    result = _strict_min(
-        result,
-        "return_on_equity_pct",
-        15
-    )
+    result = _strict_min(result, "return_on_equity_pct", 15)
 
-    result = _de_max_excluding_financials(
-        result,
-        1.0
-    )
+    result = _de_max_excluding_financials(result, 1.0)
 
-    result = _strict_min(
-        result,
-        "free_cash_flow_cr",
-        0
-    )
+    result = _strict_min(result, "free_cash_flow_cr", 0)
 
-    result = _strict_min(
-        result,
-        "revenue_cagr_5yr",
-        10
-    )
+    result = _strict_min(result, "revenue_cagr_5yr", 10)
 
     return _sort(result)
 
@@ -182,28 +139,13 @@ def value_pick(df):
 
     result = _latest_per_company(df)
 
-    result = _strict_max(
-        result,
-        "pe_ratio",
-        20
-    )
+    result = _strict_max(result, "pe_ratio", 20)
 
-    result = _strict_max(
-        result,
-        "pb_ratio",
-        3.0
-    )
+    result = _strict_max(result, "pb_ratio", 3.0)
 
-    result = _de_max_excluding_financials(
-        result,
-        2.0
-    )
+    result = _de_max_excluding_financials(result, 2.0)
 
-    result = _strict_min(
-        result,
-        "dividend_yield_pct",
-        1
-    )
+    result = _strict_min(result, "dividend_yield_pct", 1)
 
     return _sort(result)
 
@@ -220,22 +162,11 @@ def growth_accelerator(df):
 
     result = _latest_per_company(df)
 
-    result = _strict_min(
-        result,
-        "pat_cagr_5yr",
-        20
-    )
+    result = _strict_min(result, "pat_cagr_5yr", 20)
 
-    result = _strict_min(
-        result,
-        "revenue_cagr_5yr",
-        15
-    )
+    result = _strict_min(result, "revenue_cagr_5yr", 15)
 
-    result = _de_max_excluding_financials(
-        result,
-        2.0
-    )
+    result = _de_max_excluding_financials(result, 2.0)
 
     return _sort(result)
 
@@ -252,23 +183,11 @@ def dividend_champion(df):
 
     result = _latest_per_company(df)
 
-    result = _strict_min(
-        result,
-        "dividend_yield_pct",
-        2
-    )
+    result = _strict_min(result, "dividend_yield_pct", 2)
 
-    result = _strict_max(
-        result,
-        "dividend_payout_ratio_pct",
-        80
-    )
+    result = _strict_max(result, "dividend_payout_ratio_pct", 80)
 
-    result = _strict_min(
-        result,
-        "free_cash_flow_cr",
-        0
-    )
+    result = _strict_min(result, "free_cash_flow_cr", 0)
 
     return _sort(result)
 
@@ -289,21 +208,12 @@ def debt_free_blue_chip(df):
     # Financials exemption does NOT apply here because
     # this preset specifically requires zero D/E.
     result = result[
-        result["debt_to_equity"].notna()
-        & (result["debt_to_equity"] == 0)
+        result["debt_to_equity"].notna() & (result["debt_to_equity"] == 0)
     ].copy()
 
-    result = _strict_min(
-        result,
-        "return_on_equity_pct",
-        12
-    )
+    result = _strict_min(result, "return_on_equity_pct", 12)
 
-    result = _strict_min(
-        result,
-        "sales",
-        5000
-    )
+    result = _strict_min(result, "sales", 5000)
 
     return _sort(result)
 
@@ -323,24 +233,16 @@ def _calculate_revenue_cagr_3yr():
         SELECT company_id, year, sales
         FROM profitandloss
         """,
-        connection
+        connection,
     )
 
     connection.close()
 
-    sales["year"] = pd.to_numeric(
-        sales["year"],
-        errors="coerce"
-    )
+    sales["year"] = pd.to_numeric(sales["year"], errors="coerce")
 
-    sales["sales"] = pd.to_numeric(
-        sales["sales"],
-        errors="coerce"
-    )
+    sales["sales"] = pd.to_numeric(sales["sales"], errors="coerce")
 
-    sales = sales.dropna(
-        subset=["company_id", "year", "sales"]
-    ).copy()
+    sales = sales.dropna(subset=["company_id", "year", "sales"]).copy()
 
     sales["year"] = sales["year"].astype(int)
 
@@ -364,7 +266,7 @@ def _calculate_revenue_cagr_3yr():
             latest.rename("latest_sales"),
             prior.rename("prior_sales"),
         ],
-        axis=1
+        axis=1,
     )
 
     valid = (
@@ -374,16 +276,11 @@ def _calculate_revenue_cagr_3yr():
         & (combined["prior_sales"] > 0)
     )
 
-    cagr = pd.Series(
-        index=combined.index,
-        dtype=float
-    )
+    cagr = pd.Series(index=combined.index, dtype=float)
 
     cagr.loc[valid] = (
-        (
-            combined.loc[valid, "latest_sales"]
-            / combined.loc[valid, "prior_sales"]
-        ) ** (1 / 3)
+        (combined.loc[valid, "latest_sales"] / combined.loc[valid, "prior_sales"])
+        ** (1 / 3)
         - 1
     ) * 100
 
@@ -405,24 +302,16 @@ def _calculate_de_declining():
         SELECT company_id, year, debt_to_equity
         FROM financial_ratios
         """,
-        connection
+        connection,
     )
 
     connection.close()
 
-    de["year"] = pd.to_numeric(
-        de["year"],
-        errors="coerce"
-    )
+    de["year"] = pd.to_numeric(de["year"], errors="coerce")
 
-    de["debt_to_equity"] = pd.to_numeric(
-        de["debt_to_equity"],
-        errors="coerce"
-    )
+    de["debt_to_equity"] = pd.to_numeric(de["debt_to_equity"], errors="coerce")
 
-    de = de.dropna(
-        subset=["company_id", "year"]
-    ).copy()
+    de = de.dropna(subset=["company_id", "year"]).copy()
 
     de["year"] = de["year"].astype(int)
 
@@ -446,7 +335,7 @@ def _calculate_de_declining():
             latest.rename("latest_de"),
             previous.rename("previous_de"),
         ],
-        axis=1
+        axis=1,
     )
 
     return (
@@ -470,27 +359,19 @@ def turnaround_watch(df):
 
     revenue_cagr_3yr = _calculate_revenue_cagr_3yr()
 
-    result["revenue_cagr_3yr"] = result["company_id"].map(
-        revenue_cagr_3yr
-    )
+    result["revenue_cagr_3yr"] = result["company_id"].map(revenue_cagr_3yr)
 
     result = result[
-        result["revenue_cagr_3yr"].notna()
-        & (result["revenue_cagr_3yr"] > 10)
+        result["revenue_cagr_3yr"].notna() & (result["revenue_cagr_3yr"] > 10)
     ].copy()
 
     result = result[
-        result["free_cash_flow_cr"].notna()
-        & (result["free_cash_flow_cr"] > 0)
+        result["free_cash_flow_cr"].notna() & (result["free_cash_flow_cr"] > 0)
     ].copy()
 
     de_declining = _calculate_de_declining()
 
-    result = result[
-        result["company_id"]
-        .map(de_declining)
-        .fillna(False)
-    ].copy()
+    result = result[result["company_id"].map(de_declining).fillna(False)].copy()
 
     return _sort(result)
 
@@ -512,8 +393,7 @@ def run_preset(name):
 
     if name not in PRESETS:
         raise ValueError(
-            f"Unknown preset: {name}. "
-            f"Available presets: {', '.join(PRESETS)}"
+            f"Unknown preset: {name}. " f"Available presets: {', '.join(PRESETS)}"
         )
 
     df = load_data()
@@ -528,7 +408,4 @@ def run_all_presets():
 
     df = load_data()
 
-    return {
-        name: function(df)
-        for name, function in PRESETS.items()
-    }
+    return {name: function(df) for name, function in PRESETS.items()}

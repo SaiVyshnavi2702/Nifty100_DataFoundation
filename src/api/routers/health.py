@@ -1,50 +1,1 @@
-import sqlite3
-import time
-from pathlib import Path
-
-from fastapi import APIRouter, Request
-
-router = APIRouter()
-
-BASE_DIR = Path(__file__).resolve().parents[3]
-DB_PATH = BASE_DIR / "data" / "nifty100.db"
-
-TABLES = [
-    "companies",
-    "profitandloss",
-    "balancesheet",
-    "cashflow",
-    "analysis",
-    "documents",
-    "prosandcons",
-    "sectors",
-    "stock_prices",
-    "financial_ratios",
-]
-
-VERSION = "1.0.0"
-
-@router.get("/health")
-def health_check(request: Request):
-    conn = sqlite3.connect(DB_PATH)
-
-    row_counts = {}
-
-    for table in TABLES:
-        count = conn.execute(
-            f"SELECT COUNT(*) FROM {table}"
-        ).fetchone()[0]
-
-        row_counts[table] = count
-
-    conn.close()
-
-    return {
-        "status": "ok",
-        "db_row_counts": row_counts,
-        "uptime_seconds": round(
-            time.time() - request.app.state.start_time, 2
-        ),
-        "version": VERSION,
-    }
-    
+import sqlite3import timefrom pathlib import Pathfrom fastapi import APIRouter, Requestrouter = APIRouter()BASE_DIR = Path(__file__).resolve().parents[3]DB_PATH = BASE_DIR / "data" / "nifty100.db"TABLES = [    "companies",    "profitandloss",    "balancesheet",    "cashflow",    "analysis",    "documents",    "prosandcons",    "sectors",    "stock_prices",    "financial_ratios",]VERSION = "1.0.0"@router.get("/health")def health_check(request: Request):    """Handle health check."""    conn = sqlite3.connect(DB_PATH)    row_counts = {}    for table in TABLES:        count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]        row_counts[table] = count    conn.close()    return {        "status": "ok",        "db_row_counts": row_counts,        "uptime_seconds": round(time.time() - request.app.state.start_time, 2),        "version": VERSION,    }
